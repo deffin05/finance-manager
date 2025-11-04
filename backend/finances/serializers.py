@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from backend.finances.models import Transaction, Balance
+from finances.models import Transaction, Balance
 
 
 class TransactionSerializer(serializers.ModelSerializer):
