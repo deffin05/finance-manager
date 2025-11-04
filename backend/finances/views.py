@@ -8,12 +8,15 @@ class TransactionList(generics.ListCreateAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
+
 class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
+
 class BalanceCreate(generics.CreateAPIView):
     serializer_class = BalanceSerializer
+
 
 class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Balance.objects.all()
