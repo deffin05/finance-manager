@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'finances.apps.FinancesConfig',
     'rest_framework',
     'corsheaders',
+    'auth.apps.AuthConfig',
     'drf_spectacular',
     'drf_spectacular_sidecar',
 ]
