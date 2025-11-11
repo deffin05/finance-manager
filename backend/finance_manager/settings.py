@@ -41,7 +41,19 @@ INSTALLED_APPS = [
     'finances.apps.FinancesConfig',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Finance Manager API',
+    'DESCRIPTION': 'The backend API for the Finance Manager application.',
+    'VERSION': '0.0.1',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:5173',
