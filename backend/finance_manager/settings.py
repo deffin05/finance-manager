@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'drf_spectacular_sidecar',
 ]
 
 REST_FRAMEWORK = {
@@ -53,6 +54,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'The backend API for the Finance Manager application.',
     'VERSION': '0.0.1',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 CORS_ORIGIN_WHITELIST = (
