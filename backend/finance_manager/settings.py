@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'auth.apps.AuthConfig',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
     'drf_spectacular',
     'drf_spectacular_sidecar',
 ]
