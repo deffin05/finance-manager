@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 def api_client():
     yield APIClient()
 
+
 @pytest.fixture
 def user_data():
     yield {
@@ -14,6 +15,7 @@ def user_data():
         "email": "user@gmail.com",
         "password": "qwerty123",
     }
+
 
 @pytest.fixture
 def user(user_data):

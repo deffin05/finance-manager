@@ -21,6 +21,7 @@ def test_create_user_invalid_data(api_client):
     assert response.status_code == 400
     assert User.objects.count() == 0
 
+
 @pytest.mark.django_db
 def test_get_user(api_client, user):
     response = api_client.get(f"/auth/users/{user.id}/", content_type="application/json")
@@ -30,17 +31,19 @@ def test_get_user(api_client, user):
     assert response.data['email'] == user.email
     assert not 'password' in response.data
 
+
 @pytest.mark.django_db
 def test_get_tokens(api_client, user):
-    response = api_client.post("/auth/token/", {'username': 'user', 'password': 'qwerty123'}, content_type="application/json")
+    response = api_client.post("/auth/token/", {'username': 'user', 'password': 'qwerty123'},
+                               content_type="application/json")
 
     assert response.status_code == 200
     assert len(response.data['access']) > 1
     assert len(response.data['access']) > 1
+
 
 @pytest.mark.django_db
 def test_get_token_invalid_user(api_client):
     response = api_client.post("/auth/token/", {'username': 'user', 'password': '123'}, content_type="application/json")
 
     assert response.status_code == 401
-
