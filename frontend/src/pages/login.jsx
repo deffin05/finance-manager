@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { backendUrl } from "../App";
+import { isLoggedIn } from "../utils";
+import { useEffect } from "react";
 
 function Login() {
     const navigate = useNavigate();
@@ -29,6 +31,19 @@ function Login() {
         }
 
     }
+
+    useEffect(() => {
+        async function checkLogin() {
+            if (await isLoggedIn()) {
+                navigate("/", {
+                    replace: true
+                })
+            }
+        }
+        checkLogin();
+    }, [navigate])
+
+
     return (
         <>
             <form id='loginForm' style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 4 }} onSubmit={handleSubmit}>
