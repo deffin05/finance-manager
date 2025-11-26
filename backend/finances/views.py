@@ -8,6 +8,15 @@ class TransactionList(generics.ListCreateAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
+    def perform_create(self, serializer):
+        transaction = serializer.save()
+        balance, created = Balance.objects.get_or_create(
+            user=transaction.user,
+            defaults={'amount': 0},
+            currency=transaction.currency
+        )
+        balance.amount += transaction.amount
+        balance.save()
 
 class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Transaction.objects.all()
