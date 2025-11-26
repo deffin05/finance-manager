@@ -5,7 +5,6 @@ from django.contrib.auth.models import User # we need User model for creating te
 @pytest.mark.django_db
 def test_transaction_creates_balance_income(api_client, user):
     transaction_data = {
-        'user': user.id,
         'amount': 100.00,
         'currency': 'USD',
     }
@@ -23,7 +22,6 @@ def test_transaction_creates_balance_income(api_client, user):
 def test_transaction_creates_balance_expense(api_client, user):
     Balance.objects.create(user=user, amount=500.00, currency="USD")
     transaction_data = {
-        'user': user.id,
         'amount': -50.00,
         'currency': 'USD',
     }
@@ -41,7 +39,6 @@ def test_transaction_creates_balance_expense(api_client, user):
 def test_transaction_creates_balance_independence(api_client, user):
     Balance.objects.create(user=user, amount=500.00, currency="USD")
     transaction_data = {
-        'user': user.id,
         'amount': 100.00,
         'currency': 'EUR',
     }
