@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router-dom";
 import { backendUrl } from "../App";
 
 function Login() {
+    const navigate = useNavigate();
     async function handleSubmit(event) {
         event.preventDefault();
         const data = JSON.stringify(Object.fromEntries(new FormData(document.forms['loginForm']).entries()));
@@ -13,12 +15,19 @@ function Login() {
                 body: data,
             }).catch((error) => console.error(error));
 
-        const responseJSON = await response.json()
-        const accessToken = responseJSON["access"]
-        const refreshToken = responseJSON["refresh"]
+        if (response.ok) {
+            const responseJSON = await response.json()
+            const accessToken = responseJSON["access"]
+            const refreshToken = responseJSON["refresh"]
 
-        console.log(accessToken)
-        console.log(refreshToken)
+            localStorage.setItem("access", accessToken)
+            localStorage.setItem("refresh", refreshToken)
+
+            navigate("/", {
+                replace: true
+            })
+        }
+
     }
     return (
         <>
