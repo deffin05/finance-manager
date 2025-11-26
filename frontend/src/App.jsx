@@ -1,12 +1,21 @@
 // import { useState } from 'react'
+import { Link, Route, Routes } from 'react-router-dom';
 import './App.css'
+import Login from "./pages/login.jsx"
 
-const backendUrl = 'http://localhost:8000/';
+export const backendUrl = 'http://localhost:8000/';
 function App() {
   return (
     <>
-      <div className="card">
-        <TransactionForm />
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/login">Log in</Link>
+      </nav>
+      <div id='content'>
+        <Routes>
+          <Route path='/' element={<TransactionForm />} />
+          <Route path='/login' element={<Login />} />
+        </Routes>
       </div>
     </>
   )
