@@ -113,7 +113,7 @@ function TransactionForm({ onSuccess }) {
     }
     return (
         <>
-            <form id='transactionForm' style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 4 }} onSubmit={handleSubmit}>
+            <form id='transactionForm' onSubmit={handleSubmit}>
                 <div>
                     <label form='currency'>Currency</label>
                     <select name="currency" id="currency" required>

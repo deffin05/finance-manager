@@ -18,3 +18,19 @@ thead {
 tr:nth-child(even) {
     background-color: #e5cd75;
 }
+
+#transactionForm {
+    padding: 10px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+#transactionForm>div {
+    display: flex;
+    flex-direction: column;
+}
+
+input[type="submit"] {
+    align-self: flex-end;
+}
