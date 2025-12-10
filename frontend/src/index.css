@@ -96,3 +96,7 @@ nav {
   justify-content: center;
   place-items: center;
 }
+
+input {
+  line-height: 1.5;
+}
