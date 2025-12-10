@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { backendUrl } from "../App";
+import DeleteIcon from './../assets/delete.svg';
+import EditIcon from './../assets/edit.svg';
 
 export default function Dashboard() {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -78,6 +80,7 @@ function TransactionList({ refreshTrigger }) {
                     <tr>
                         <th>Amount</th>
                         <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,6 +88,12 @@ function TransactionList({ refreshTrigger }) {
                         <tr>
                             <td>${transaction.amount}</td>
                             <td>{transaction.date}</td>
+                            <td>
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                    <button class="deleteButton iconButton"><img src={DeleteIcon} alt="Delete" class="icon" /></button>
+                                    <button class="editButton iconButton"><img src={EditIcon} alt="Edit" class="icon" /></button>
+                                </div>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
