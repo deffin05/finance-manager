@@ -73,13 +73,22 @@ function TransactionList({ refreshTrigger }) {
     return (
         <>
             <h3>Transactions:</h3>
-            <ul>
-                {transactions.map((transaction) => (
-                    <li key={transaction.id}>
-                        ${transaction.amount} - {transaction.date}
-                    </li>
-                ))}
-            </ul>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {transactions.slice(0, 10).map((transaction) => (
+                        <tr>
+                            <td>${transaction.amount}</td>
+                            <td>{transaction.date}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </>
     )
 }
@@ -87,10 +96,7 @@ function TransactionList({ refreshTrigger }) {
 function TransactionForm({ onSuccess }) {
     async function handleSubmit(event) {
         event.preventDefault();
-        const data = JSON.stringify({
-            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries()),
-            currency: 'USD'
-        });
+        const data = JSON.stringify(Object.fromEntries(new FormData(document.forms['transactionForm']).entries()));
         const response = await fetch(backendUrl + 'transactions/',
             {
                 method: "POST",
@@ -108,11 +114,20 @@ function TransactionForm({ onSuccess }) {
     return (
         <>
             <form id='transactionForm' style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 4 }} onSubmit={handleSubmit}>
-                <label form='amount'>Amount</label>
-                <input type='number' name='amount' step={0.01} required />
-
+                <div>
+                    <label form='currency'>Currency</label>
+                    <select name="currency" id="currency" required>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="UAH">UAH</option>
+                    </select>
+                </div>
+                <div>
+                    <label form='amount'>Amount</label>
+                    <input type='number' name='amount' step={0.01} required />
+                </div>
                 <input type='submit' value="Add transaction" />
-            </form>
+            </form >
         </>
     )
 }
