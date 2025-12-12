@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "node -e \"process.platform === 'win32' ? require('child_process').execSync('cd backend && venv\\\\Scripts\\\\activate && python manage.py runserver', {stdio: 'inherit'}) : require('child_process').execSync('cd backend && source venv/bin/activate && python manage.py runserver', {stdio: 'inherit'})\""
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
