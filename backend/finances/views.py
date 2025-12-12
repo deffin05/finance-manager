@@ -26,6 +26,21 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Transaction.objects.filter(user=self.request.user)
 
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        old_transaction = Transaction.objects.get(pk=instance.pk)
+        transaction = serializer.save()
+        
+        balance = Balance.objects.get(
+            user = transaction.user,
+            currency=transaction.currency
+        )
+        
+        balance.amount -= old_transaction.amount
+        balance.amount += transaction.amount
+        balance.save()
+
+
 class BalanceList(generics.ListCreateAPIView):
     serializer_class = BalanceSerializer
 
