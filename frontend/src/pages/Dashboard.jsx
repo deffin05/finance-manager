@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { backendUrl } from "../App";
+import DeleteIcon from './../assets/delete.svg';
+import EditIcon from './../assets/edit.svg';
 
 export default function Dashboard() {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -12,8 +14,8 @@ export default function Dashboard() {
     return (
         <div>
             <Balance refreshTrigger={refreshKey} />
-            <TransactionList refreshTrigger={refreshKey} />
-            <TransactionForm onSuccess={refreshData} />
+            <TransactionList refreshTrigger={refreshKey} refreshFunction={refreshData} />
+            <TransactionForm refreshFunction={refreshData} />
         </div>
     );
 }
@@ -36,7 +38,7 @@ function Balance({ refreshTrigger }) {
                     setBalance(0);
                 } else {
                     // adjust this depending on the API shape; using first item or a value field
-                    setBalance(balanceJSON[0].amount ?? balanceJSON[0]);
+                    setBalance(new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(balanceJSON[0].amount) ?? balanceJSON[0]);
                 }
             } catch (error) {
                 console.error(error);
@@ -51,8 +53,11 @@ function Balance({ refreshTrigger }) {
     )
 }
 
-function TransactionList({ refreshTrigger }) {
+function TransactionList({ refreshTrigger, refreshFunction }) {
     const [transactions, setTransactions] = useState([]);
+
+    const [editRowId, setEditRowId] = useState(null);
+    const [formData, setFormData] = useState({ amount: 0, date: "", currency: "USD" });
 
     useEffect(() => {
         async function getTransactions() {
@@ -66,31 +71,129 @@ function TransactionList({ refreshTrigger }) {
 
             const transactions = await transactionsResponse.json();
             setTransactions(transactions);
-            console.log(transactions);
         }
         getTransactions();
     }, [refreshTrigger]);
+
+    const handleEditClick = (transaction) => {
+        setEditRowId(transaction.id);
+        setFormData({ amount: transaction.amount, date: transaction.date, currency: "USD" });
+    };
+
+    const handleInputChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSave = async (transaction) => {
+        if (formData.amount == transaction.amount && formData.date == transaction.date) {
+            setEditRowId(null);
+            return;
+        }
+        try {
+            const response = await fetch(`${backendUrl}transactions/${transaction.id}/`, {
+                method: "PUT",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access'),
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                setEditRowId(null);
+                refreshFunction();
+            } else {
+                console.error("Failed to save");
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleCancel = () => {
+        setEditRowId(null);
+    };
+
     return (
         <>
             <h3>Transactions:</h3>
-            <ul>
-                {transactions.map((transaction) => (
-                    <li key={transaction.id}>
-                        ${transaction.amount} - {transaction.date}
-                    </li>
-                ))}
-            </ul>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {transactions.slice(0, 10).map((transaction) => {
+                        const isEditing = editRowId === transaction.id;
+
+                        return (
+                            <tr key={transaction.id}>
+                                <td>
+                                    {isEditing ? (
+                                        <>
+                                            $<input
+                                                type="number"
+                                                name="amount"
+                                                step={0.01}
+                                                value={formData.amount}
+                                                onChange={handleInputChange}
+                                            />
+                                        </>
+                                    ) : (
+                                        `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(transaction.amount)}`
+                                    )}
+                                </td>
+                                <td>
+                                    {isEditing ? (
+                                        <input
+                                            type="date"
+                                            name="date"
+                                            value={formData.date}
+                                            onChange={handleInputChange}
+                                        />
+                                    ) : (
+                                        transaction.date
+                                    )}
+                                </td>
+                                <td>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        {isEditing ? (
+                                            <>
+                                                <button onClick={() => handleSave(transaction)} className="iconButton editButton">
+                                                    Save
+                                                </button>
+                                                <button onClick={handleCancel} className="iconButton deleteButton" style={{ width: 72 }}>
+                                                    Cancel
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <EditButton onClick={() => handleEditClick(transaction)} />
+
+                                                <DeleteButton
+                                                    transaction={transaction}
+                                                    refreshFunction={refreshFunction}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
         </>
     )
 }
 
-function TransactionForm({ onSuccess }) {
+function TransactionForm({ refreshFunction }) {
     async function handleSubmit(event) {
         event.preventDefault();
-        const data = JSON.stringify({
-            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries()),
-            currency: 'USD'
-        });
+        const data = JSON.stringify(Object.fromEntries(new FormData(document.forms['transactionForm']).entries()));
         const response = await fetch(backendUrl + 'transactions/',
             {
                 method: "POST",
@@ -102,17 +205,60 @@ function TransactionForm({ onSuccess }) {
             }).catch((error) => console.error(error));
 
         if (response.ok) {
-            onSuccess();
+            refreshFunction();
         }
     }
     return (
         <>
-            <form id='transactionForm' style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 4 }} onSubmit={handleSubmit}>
-                <label form='amount'>Amount</label>
-                <input type='number' name='amount' step={0.01} required />
-
+            <form id='transactionForm' onSubmit={handleSubmit}>
+                <div>
+                    <label form='currency'>Currency</label>
+                    <select name="currency" id="currency" required>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="UAH">UAH</option>
+                    </select>
+                </div>
+                <div>
+                    <label form='amount'>Amount</label>
+                    <input type='number' name='amount' step={0.01} required />
+                </div>
                 <input type='submit' value="Add transaction" />
-            </form>
+            </form >
+        </>
+    )
+}
+
+function EditButton({ onClick }) {
+
+    return (
+        <>
+            <button className="editButton iconButton" onClick={onClick}><img src={EditIcon} className="icon" /></button>
+        </>
+    )
+}
+
+function DeleteButton({ transaction, refreshFunction }) {
+
+    async function handle(event) {
+        event.preventDefault();
+        const response = await fetch(backendUrl + `transactions/${transaction.id}/`,
+            {
+                method: "DELETE",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access'),
+                },
+            }).catch((error) => console.error(error));
+
+        if (response.ok) {
+            refreshFunction();
+        }
+    }
+
+    return (
+        <>
+            <button className="deleteButton iconButton" onClick={handle}><img src={DeleteIcon} className="icon" /></button>
         </>
     )
 }

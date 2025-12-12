@@ -4,8 +4,8 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: rgba(0, 0, 0, 0.87);
+  background-color: #f7e4a1;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -95,4 +95,8 @@ nav {
   display: flex;
   justify-content: center;
   place-items: center;
+}
+
+input {
+  line-height: 1.5;
 }

@@ -1,0 +1,57 @@
+table {
+    border-collapse: collapse;
+    min-width: 30vw;
+    width: 100%;
+}
+
+th,
+td {
+    border: 2px solid #1a1a1a;
+    text-align: left;
+    padding: 0px 8px;
+}
+
+thead {
+    background-color: #facd28;
+}
+
+tr:nth-child(even) {
+    background-color: #e5cd75;
+}
+
+#transactionForm {
+    padding: 10px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+#transactionForm>div {
+    display: flex;
+    flex-direction: column;
+}
+
+input[type="submit"] {
+    align-self: flex-end;
+}
+
+.iconButton {
+    width: 48px;
+    height: 48px;
+
+    padding: 2px;
+    margin: 2px 0;
+}
+
+.deleteButton {
+    background-color: rgb(220, 0, 0);
+}
+
+.editButton {
+    background-color: rgb(0, 0, 220);
+}
+
+.icon {
+    width: 100%;
+    height: auto;
+}
