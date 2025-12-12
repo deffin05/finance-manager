@@ -39,6 +39,16 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
         balance.amount -= old_transaction.amount
         balance.amount += transaction.amount
         balance.save()
+        
+    def perform_destroy(self, instance):
+        balance = Balance.objects.get(
+            user = instance.user,
+            currency = instance.currency
+        )
+        
+        balance.amount -= instance.amount
+        balance.save()
+        instance.delete()
 
 
 class BalanceList(generics.ListCreateAPIView):
