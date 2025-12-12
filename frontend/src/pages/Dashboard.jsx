@@ -38,7 +38,7 @@ function Balance({ refreshTrigger }) {
                     setBalance(0);
                 } else {
                     // adjust this depending on the API shape; using first item or a value field
-                    setBalance(balanceJSON[0].amount ?? balanceJSON[0]);
+                    setBalance(new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(balanceJSON[0].amount) ?? balanceJSON[0]);
                 }
             } catch (error) {
                 console.error(error);
@@ -143,7 +143,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                             />
                                         </>
                                     ) : (
-                                        `$${transaction.amount}`
+                                        `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(transaction.amount)}`
                                     )}
                                 </td>
                                 <td>
