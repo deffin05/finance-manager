@@ -70,7 +70,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
             }).catch((error) => console.error(error));
 
             const transactions = await transactionsResponse.json();
-            setTransactions(transactions);
+            setTransactions(transactions.results);
         }
         getTransactions();
     }, [refreshTrigger]);
@@ -126,7 +126,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {transactions.slice(0, 10).map((transaction) => {
+                    {transactions.map((transaction) => {
                         const isEditing = editRowId === transaction.id;
 
                         return (
