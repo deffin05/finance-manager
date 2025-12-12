@@ -155,7 +155,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                             onChange={handleInputChange}
                                         />
                                     ) : (
-                                        transaction.date
+                                        new Date(transaction.date).toLocaleString()
                                     )}
                                 </td>
                                 <td>
