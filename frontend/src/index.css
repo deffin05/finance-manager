@@ -26,7 +26,6 @@ a:hover {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
@@ -80,7 +79,7 @@ nav {
   align-items: center;
   justify-content: center;
   position: fixed;
-  top: 0px;
+  top: 0;
   width: 100%;
 
   height: 8vh;
@@ -91,7 +90,8 @@ nav {
 
 #content {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 80vh;
+  margin: 10vh 0;
   display: flex;
   justify-content: center;
   place-items: center;
