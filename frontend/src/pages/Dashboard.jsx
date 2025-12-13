@@ -56,12 +56,16 @@ function Balance({ refreshTrigger }) {
 function TransactionList({ refreshTrigger, refreshFunction }) {
     const [transactions, setTransactions] = useState([]);
 
+    const [nextPageUrl, setNextPageUrl] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
     const [editRowId, setEditRowId] = useState(null);
     const [formData, setFormData] = useState({ amount: 0, date: "", currency: "USD" });
 
-    useEffect(() => {
-        async function getTransactions() {
-            const transactionsResponse = await fetch(backendUrl + 'transactions/', {
+    async function getTransactions(url, isLoadMore = false) {
+        setIsLoading(true);
+        try {
+            const transactionsResponse = await fetch(url, {
                 method: "GET",
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,10 +74,31 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
             }).catch((error) => console.error(error));
 
             const transactions = await transactionsResponse.json();
-            setTransactions(transactions.results);
+            if (isLoadMore) {
+                // If loading more, append to existing list
+                setTransactions(prev => [...prev, ...transactions.results]);
+            } else {
+                // If initial load or refresh, overwrite list
+                setTransactions(transactions.results);
+            }
+
+            setNextPageUrl(transactions.next);
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setIsLoading(false)
         }
-        getTransactions();
+    }
+
+    useEffect(() => {
+        getTransactions(backendUrl + 'transactions/', false);
     }, [refreshTrigger]);
+
+    function handleLoadMore() {
+        if (nextPageUrl) {
+            getTransactions(nextPageUrl, true);
+        }
+    }
 
     const handleEditClick = (transaction) => {
         setEditRowId(transaction.id);
@@ -191,6 +216,20 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     })}
                 </tbody>
             </table>
+
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                {isLoading && <p>Loading...</p>}
+
+                {!isLoading && nextPageUrl && (
+                    <button
+                        onClick={handleLoadMore}
+                        style={{ padding: '10px 20px', cursor: 'pointer' }}
+                    >
+                        Load More
+                    </button>
+                )}
+            </div>
+
         </>
     )
 }
