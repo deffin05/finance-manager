@@ -4,5 +4,6 @@ from django.db import models
 # Create your models here.
 
 class MonobankUser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     token = models.CharField(max_length=100)
+    last_synced_at = models.DateTimeField()
