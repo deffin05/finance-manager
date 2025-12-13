@@ -17,3 +17,6 @@ class TokenView(generics.CreateAPIView, generics.UpdateAPIView, generics.Destroy
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class MonobankBalanceList(generics.ListAPIView):
+    pass
