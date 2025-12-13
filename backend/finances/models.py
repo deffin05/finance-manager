@@ -13,12 +13,16 @@ class Currency(models.Model):
 
 
 class Transaction(models.Model):
+    name = models.CharField(max_length=200, blank=True, default="")
+    category = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateTimeField(default=timezone.now)
     amount = models.DecimalField(decimal_places=2, max_digits=20)
+    balance = models.ForeignKey('Balance', on_delete=models.CASCADE)
 
 
 class Balance(models.Model):
+    name = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(decimal_places=2, max_digits=20)
     currency = ForeignKey(Currency, on_delete=models.CASCADE)
