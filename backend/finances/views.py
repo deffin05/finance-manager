@@ -4,6 +4,7 @@ from finances.serializers import TransactionSerializer, BalanceSerializer
 from finances.models import Transaction, Balance
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 5
@@ -36,12 +37,10 @@ class TransactionList(generics.ListCreateAPIView):
         return queryset 
 
     def perform_create(self, serializer): # Override to update balance on transaction creation
-        transaction = serializer.save(user=self.request.user) # Ensure the transaction is linked to the authenticated user
-        balance, created = Balance.objects.get_or_create(
-            user=transaction.user,
-            defaults={'amount': 0},
-            currency=transaction.currency
-        )
+        balance = serializer.validated_data.get('balance')
+        if balance and balance.user != self.request.user:# Ensure the transaction is linked to the authenticated user
+            raise ValidationError({"balance": "You do not own this balance."}) 
+        transaction = serializer.save(user=self.request.user) 
         balance.amount += transaction.amount
         balance.save()
 
@@ -55,22 +54,20 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         instance = serializer.instance
         old_transaction = Transaction.objects.get(pk=instance.pk)
+        old_balance = old_transaction.balance
         transaction = serializer.save()
         
-        balance = Balance.objects.get(
-            user = transaction.user,
-            currency=transaction.currency
-        )
+        balance = serializer.validated_data.get('balance')
         
-        balance.amount -= old_transaction.amount
+        old_balance.amount -= old_transaction.amount
+        old_balance.save()
+        balance.refresh_from_db()
+
         balance.amount += transaction.amount
         balance.save()
         
     def perform_destroy(self, instance):
-        balance = Balance.objects.get(
-            user = instance.user,
-            currency = instance.currency
-        )
+        balance = instance.balance
         
         balance.amount -= instance.amount
         balance.save()
