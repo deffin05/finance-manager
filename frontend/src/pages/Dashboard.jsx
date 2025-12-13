@@ -56,12 +56,16 @@ function Balance({ refreshTrigger }) {
 function TransactionList({ refreshTrigger, refreshFunction }) {
     const [transactions, setTransactions] = useState([]);
 
+    const [nextPageUrl, setNextPageUrl] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
     const [editRowId, setEditRowId] = useState(null);
     const [formData, setFormData] = useState({ amount: 0, date: "", currency: "USD" });
 
-    useEffect(() => {
-        async function getTransactions() {
-            const transactionsResponse = await fetch(backendUrl + 'transactions/', {
+    async function getTransactions(url, isLoadMore = false) {
+        setIsLoading(true);
+        try {
+            const transactionsResponse = await fetch(url, {
                 method: "GET",
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,14 +74,37 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
             }).catch((error) => console.error(error));
 
             const transactions = await transactionsResponse.json();
-            setTransactions(transactions);
+            if (isLoadMore) {
+                // If loading more, append to existing list
+                setTransactions(prev => [...prev, ...transactions.results]);
+            } else {
+                // If initial load or refresh, overwrite list
+                setTransactions(transactions.results);
+            }
+
+            setNextPageUrl(transactions.next);
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setIsLoading(false)
         }
-        getTransactions();
+    }
+
+    useEffect(() => {
+        getTransactions(backendUrl + 'transactions/', false);
     }, [refreshTrigger]);
+
+    function handleLoadMore() {
+        if (nextPageUrl) {
+            getTransactions(nextPageUrl, true);
+        }
+    }
 
     const handleEditClick = (transaction) => {
         setEditRowId(transaction.id);
-        setFormData({ amount: transaction.amount, date: transaction.date, currency: "USD" });
+        let local_date = new Date(transaction.date);
+        local_date.setMinutes(local_date.getMinutes() - local_date.getTimezoneOffset())
+        setFormData({ amount: transaction.amount, date: local_date.toISOString().slice(0, 19), currency: "USD" });
     };
 
     const handleInputChange = (e) => {
@@ -85,7 +112,9 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
     };
 
     const handleSave = async (transaction) => {
-        if (formData.amount == transaction.amount && formData.date == transaction.date) {
+        let utc_date = new Date(formData.date).toISOString();
+
+        if (formData.amount == transaction.amount && utc_date.slice(0, 19) == transaction.date.slice(0, 19)) {
             setEditRowId(null);
             return;
         }
@@ -96,7 +125,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('access'),
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, date: utc_date})
             });
 
             if (response.ok) {
@@ -126,7 +155,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {transactions.slice(0, 10).map((transaction) => {
+                    {transactions.map((transaction) => {
                         const isEditing = editRowId === transaction.id;
 
                         return (
@@ -149,13 +178,14 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                 <td>
                                     {isEditing ? (
                                         <input
-                                            type="date"
+                                            type="datetime-local"
                                             name="date"
+                                            step={1}
                                             value={formData.date}
                                             onChange={handleInputChange}
                                         />
                                     ) : (
-                                        transaction.date
+                                        new Date(transaction.date).toLocaleString()
                                     )}
                                 </td>
                                 <td>
@@ -186,6 +216,20 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     })}
                 </tbody>
             </table>
+
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                {isLoading && <p>Loading...</p>}
+
+                {!isLoading && nextPageUrl && (
+                    <button
+                        onClick={handleLoadMore}
+                        style={{ padding: '10px 20px', cursor: 'pointer' }}
+                    >
+                        Load More
+                    </button>
+                )}
+            </div>
+
         </>
     )
 }
