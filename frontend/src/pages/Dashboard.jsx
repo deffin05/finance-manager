@@ -77,7 +77,9 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
 
     const handleEditClick = (transaction) => {
         setEditRowId(transaction.id);
-        setFormData({ amount: transaction.amount, date: transaction.date, currency: "USD" });
+        let local_date = new Date(transaction.date);
+        local_date.setMinutes(local_date.getMinutes() - local_date.getTimezoneOffset())
+        setFormData({ amount: transaction.amount, date: local_date.toISOString().slice(0, 19), currency: "USD" });
     };
 
     const handleInputChange = (e) => {
@@ -85,7 +87,9 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
     };
 
     const handleSave = async (transaction) => {
-        if (formData.amount == transaction.amount && formData.date == transaction.date) {
+        let utc_date = new Date(formData.date).toISOString();
+
+        if (formData.amount == transaction.amount && utc_date.slice(0, 19) == transaction.date.slice(0, 19)) {
             setEditRowId(null);
             return;
         }
@@ -96,7 +100,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('access'),
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, date: utc_date})
             });
 
             if (response.ok) {
@@ -149,8 +153,9 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                 <td>
                                     {isEditing ? (
                                         <input
-                                            type="date"
+                                            type="datetime-local"
                                             name="date"
+                                            step={1}
                                             value={formData.date}
                                             onChange={handleInputChange}
                                         />
