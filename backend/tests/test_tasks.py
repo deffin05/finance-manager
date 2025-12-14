@@ -1,8 +1,11 @@
 import pytest
 from unittest.mock import patch, Mock
 from decimal import Decimal
-from finances.tasks import fetch_crypto_rates
+from finances.tasks import fetch_crypto_rates, import_transaction_file
 from finances.models import Currency
+from django.core.files.uploadedfile import SimpleUploadedFile
+from finances.models import Transaction
+from pathlib import Path
 import json
 
 @pytest.mark.django_db
@@ -34,3 +37,37 @@ def test_fetch_crypto_rates_with_file_data(mock_getenv, mock_requests_get):
             f"Price mismatch for {coin_id}: JSON had {expected_price}, DB has {db_coin.rate}"
             
         assert db_coin.name == item['name']
+
+FAKE_MCC_MAPPING = {
+    "5411": "Grocery Stores",
+    "4121": "Taxicabs and Limousines",
+    "5812": "Restaurants and Places to Eat",
+    "4829": "Money Transfer",
+    "7372": "Computer Software Stores"
+}
+
+@pytest.mark.django_db
+def test_import_monobank_from_file(user, balance):
+    csv_path = Path(__file__).parent / "static" / "monobank_statement.csv"
+
+    with open(csv_path, 'rb') as f:
+        file_content = f.read()
+
+    file_obj = SimpleUploadedFile("test_statement.csv", file_content)
+
+    with patch.dict('finances.tasks.MCC_GROUP_MAPPING', FAKE_MCC_MAPPING):
+        response = import_transaction_file(file_obj, user, balance)
+
+    assert response['status'] == 'success'
+    assert response['count'] == 5
+
+    t1 = Transaction.objects.get(amount=-1200.50)
+    assert 'Supermarket "BigBasket"' in t1.name 
+    assert t1.category == "Grocery Stores"
+
+    t3 = Transaction.objects.get(amount=-500.00)
+    assert t3.name == "Steam Games"
+    assert t3.category == "Computer Software Stores"
+
+    balance.refresh_from_db()
+    assert float(balance.amount) == 5000.00

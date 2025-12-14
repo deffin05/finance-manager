@@ -4,13 +4,16 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from finances.serializers import TransactionSerializer, BalanceSerializer
+from finances.serializers import TransactionSerializer, BalanceSerializer, FileUploadSerializer
 from finances.models import Transaction, Balance
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 
+import pandas as pd
+
+from finances.tasks import import_transaction_file
 from monobank.models import MonobankUser, MonobankBalance
 from monobank.views import fetch_monobank_report
 
@@ -104,6 +107,8 @@ class BalanceList(generics.ListCreateAPIView):
     def get_queryset(self):
         return Balance.objects.filter(user=self.request.user)
     def perform_create(self, serializer): #override to set user on balance creation
+        if not serializer.validated_data.get('currency'):
+            raise ValidationError({"currency": "Currency must be specified."})
         serializer.save(user=self.request.user)
 
 class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -117,8 +122,35 @@ class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
 class BalanceSumm(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
+    def get(self, request):
         user = request.user
         balances = Balance.objects.filter(user=user)
         total_amount = sum(balance.amount * balance.currency.rate for balance in balances)
         return Response({'total_amount_uah': total_amount})
+    
+class ProcessFileUpload(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = FileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            file = serializer.validated_data['file']
+            #try:
+            balance_id = request.query_params.get('balance_id')
+            balance = Balance.objects.get(pk=balance_id)
+            if not balance or not (balance.user == request.user):
+                raise Http404
+            import_transaction_file(file, request.user, balance)
+            return Response({'status': 'file processed successfully'})
+            #except Exception as e:
+            #    return Response({'error': str(e)}, status=400)
+        return Response(serializer.errors, status=400)
+    
+class RefreshExchangeRates(APIView):
+
+    def post(self, request):
+        from finances.tasks import fetch_exchange_rates
+        from finances.tasks import fetch_crypto_rates
+        #fetch_exchange_rates()
+        fetch_crypto_rates()
+        return Response({'status': 'exchange rates refreshed successfully'})
