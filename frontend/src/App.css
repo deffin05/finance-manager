@@ -78,7 +78,7 @@ input[type="submit"] {
     text-align: center;
 }
 
-.modalContent > form {
+.verticalForm {
     display: flex;
     flex-direction: column;
     gap: 10px;

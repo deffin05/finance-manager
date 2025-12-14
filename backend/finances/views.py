@@ -1,4 +1,5 @@
 from django.http.response import Http404
+from django.utils import timezone
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,8 +11,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 
+from monobank.models import MonobankUser, MonobankBalance
+from monobank.views import fetch_monobank_report
+
+
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 250
 
@@ -22,6 +27,13 @@ class TransactionList(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
+
+        mono_user = MonobankUser.objects.filter(user=self.request.user).first()
+        if mono_user and mono_user.last_synced_at.timestamp() < timezone.now().timestamp() - 3600 * 6:
+            for balance in MonobankBalance.objects.filter(user=mono_user, watch=True):
+                fetch_monobank_report(mono_user.token, balance.monobank_id, int(mono_user.last_synced_at.timestamp()),
+                                      self.request.user, True)
+
         balance_id = self.kwargs["pk"]
         balance = Balance.objects.get(pk=balance_id)
 
@@ -44,20 +56,20 @@ class TransactionList(generics.ListCreateAPIView):
         if order == 'desc': sort_by = '-'+sort_by
 
         queryset = queryset.order_by(sort_by)
-        return queryset 
+        return queryset
 
     def perform_create(self, serializer): # Override to update balance on transaction creation
         balance_id = self.kwargs["pk"]
         balance = Balance.objects.get(pk=balance_id)
         if balance and balance.user != self.request.user:# Ensure the transaction is linked to the authenticated user
-            raise ValidationError({"balance": "You do not own this balance."}) 
+            raise ValidationError({"balance": "You do not own this balance."})
         transaction = serializer.save(user=self.request.user, balance=balance)
         balance.amount += transaction.amount
         balance.save()
 
 class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TransactionSerializer
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Transaction.objects.filter(user=self.request.user)
@@ -67,19 +79,19 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
         old_transaction = Transaction.objects.get(pk=instance.pk)
         old_balance = old_transaction.balance
         transaction = serializer.save()
-        
+
         balance = transaction.balance
-        
+
         old_balance.amount -= old_transaction.amount
         old_balance.save()
         balance.refresh_from_db()
 
         balance.amount += transaction.amount
         balance.save()
-        
+
     def perform_destroy(self, instance):
         balance = instance.balance
-        
+
         balance.amount -= instance.amount
         balance.save()
         instance.delete()
@@ -87,7 +99,7 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class BalanceList(generics.ListCreateAPIView):
     serializer_class = BalanceSerializer
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Balance.objects.filter(user=self.request.user)
@@ -96,7 +108,7 @@ class BalanceList(generics.ListCreateAPIView):
 
 class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Balance.objects.all()
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     serializer_class = BalanceSerializer
     def get_queryset(self):
