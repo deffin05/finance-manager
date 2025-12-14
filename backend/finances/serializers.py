@@ -21,3 +21,6 @@ class BalanceSerializer(serializers.ModelSerializer):
         # formatting ensures we don't get scientific notation (1E+2)
         value = obj.amount.normalize() 
         return "{:f}".format(value)
+    
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
