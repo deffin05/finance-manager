@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
+from datetime import timezone as tz
+from django.utils import timezone
 
 import requests
 from rest_framework import generics
@@ -50,6 +52,7 @@ def fetch_monobank_report(token, balance_id, timestamp, user):
     }
 
     response = requests.get(url, headers=headers)
+    print(response.status_code)
     if response.ok:
         response_json = response.json()
 
@@ -58,7 +61,7 @@ def fetch_monobank_report(token, balance_id, timestamp, user):
                 name=report["description"],
                 category='-',
                 monobank_id=report["id"],
-                date=datetime.fromtimestamp(report["time"], tz=timezone.utc),
+                date=datetime.fromtimestamp(report["time"], tz=tz.utc),
                 amount=report["amount"] / 100,
                 balance=MonobankBalance.objects.get(monobank_id=balance_id).balance,
                 user=user
@@ -101,6 +104,7 @@ class MonobankBalanceWatch(generics.UpdateAPIView):
     def perform_update(self, serializer):
         instance = serializer.save()
 
+        print(instance.watch)
         if instance.watch:
             balance = Balance.objects.create(
                 name=instance.name,
@@ -110,6 +114,11 @@ class MonobankBalanceWatch(generics.UpdateAPIView):
             )
             instance.balance = balance
             instance.save()
+
+            timestamp = int((timezone.now() - timedelta(days=31)).timestamp())
+            print(timestamp)
+            fetch_monobank_report(MonobankUser.objects.get(user=self.request.user).token, instance.monobank_id,
+                                  timestamp, self.request.user)
         else:
             instance.balance.delete()
             instance.balance = None
