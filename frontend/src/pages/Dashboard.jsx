@@ -114,6 +114,15 @@ function Balance({ refreshTrigger, balanceId, refreshFunction, setBalanceId, cur
     )
 }
 
+function formatDecimalString(number) {
+    let split = number.split('.')
+    while (split[1].length > 2 && split[1].charAt(split[1].length - 1) === "0") {
+        split[1] = split[1].slice(0, -1)
+    }
+
+    return split.join('.')
+}
+
 function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId }) {
     const [transactions, setTransactions] = useState([]);
 
@@ -229,7 +238,7 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
                                                 type="number"
                                                 name="amount"
                                                 step={0.01}
-                                                value={formData.amount}
+                                                value={formatDecimalString(formData.amount)}
                                                 onChange={handleInputChange}
                                             />
                                         </>
