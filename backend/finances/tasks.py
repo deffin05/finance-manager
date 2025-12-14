@@ -89,16 +89,16 @@ def fetch_crypto_rates():
 COLUMN_MAPPING = {
     'date': [
         'Date', 'date', 'date_and_time',
-        'Дата', 'дата', 'Час транзакції', 'дата_i_час_операції'
+        'Дата', 'дата', 'час_транзакції', 'дата_i_час_операції'
     ],
     'amount': [
         'card_currency_amount,_(uah)',
         'Amount', 'amount', 'amount_in_card_currency', 
-        'Сума', 'сума', 'Сума у валюті картки', 'Всього', 'сума_в_валюті_картки_(uah)'
+        'Сума', 'сума', 'сума_в_валюті_картки', 'всього', 'сума_в_валюті_картки_(uah)'
     ],
     'description': [
         'Description', 'description', 
-        'Опис', 'опис', 'Призначення', 'деталі_операції'
+        'Опис', 'опис', 'призначення', 'деталі_операції', 'опис_операції'
     ],
     'category': [
         'Category', 'category',
@@ -106,7 +106,7 @@ COLUMN_MAPPING = {
     ],
     'balance': [
         'balance', 'баланс',
-        'rest_at_the_end_of_the_period', 'категорія', 'mcc', 'мсс'
+        'rest_at_the_end_of_the_period', 'залишок_після_операції', 'залишок_на_кінець_періоду'
     ]
 }
 

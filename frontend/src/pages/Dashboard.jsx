@@ -28,6 +28,7 @@ export default function Dashboard() {
     const [currency, setCurrency] = useState('');
     const [balances, setBalances] = useState([]);
     const [isBalancesLoaded, setIsBalancesLoaded] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const refreshData = () => {
         setRefreshKey(oldKey => oldKey + 1);
@@ -41,10 +42,97 @@ export default function Dashboard() {
         load()
     }, [refreshKey])
 
+    async function handleFileChange(event) {
+        event.preventDefault()
+        const formData = new FormData()
+        const file = event.target.files[0];
+
+        formData.append('file',file)
+
+        const response = await fetch(backendUrl + `import/?balance_id=${balanceId}`, {
+            method: "POST",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access'),
+            },
+            body: formData
+        })
+
+        if (response.ok) {
+            refreshData()
+        }
+    }
+
+    async function handleDeleteBalance(event) {
+        event.preventDefault()
+
+        const response = await fetch(backendUrl + `balance/${balanceId}/`,
+            {
+                method: "DELETE",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access'),
+                },
+            }).catch((error) => console.error(error));
+
+        if (response.ok) {
+            setIsBalancesLoaded(false)
+            refreshData()
+        }
+    }
+
+    async function handleEditBalance(event) {
+        event.preventDefault();
+        if (balanceId) {
+            setIsEditModalOpen(true);
+        }
+    }
+
     return (
         <div>
             {isBalancesLoaded ?
                 <>
+                    <div
+                        style={{
+                            display:"flex",
+                            justifyContent:"space-between"
+                        }}
+                    >
+                        <input
+                            type={"file"}
+                            id={"fileUpload"}
+                            onChange={handleFileChange}
+                            hidden
+                        />
+                        <label
+                            htmlFor={"fileUpload"}
+                            style={{
+                                backgroundColor:"#222",
+                                color:"#fff",
+                                padding:"8px",
+                                borderRadius:"4px",
+                                cursor:"pointer"
+                            }}
+                        >Upload payment statement</label>
+
+                        <div
+                        style={{
+                            display:"flex",
+                            gap:"8px"
+                        }}>
+                            <button
+                                style={{
+                                    backgroundColor:"#00c"
+                                }}
+                                onClick={handleEditBalance}
+                            >Edit</button>
+                            <button
+                                style={{
+                                    backgroundColor:"#c00"
+                                }}
+                                onClick={handleDeleteBalance}
+                            >Delete</button>
+                        </div>
+                    </div>
                     <Balance
                         refreshTrigger={refreshKey}
                         balanceId={balanceId}
@@ -61,6 +149,12 @@ export default function Dashboard() {
                         currency={currency}
                     />
                     <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                    <EditBalanceModal
+                        isOpen={isEditModalOpen}
+                        onClose={() => setIsEditModalOpen(false)}
+                        onUpdated={refreshData}
+                        balanceToEdit={balances.find(b => b.id.toString() === balanceId.toString())}
+                    />
                 </> :
                 <p>Loading...</p>
             }
@@ -532,6 +626,107 @@ function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunct
                     </ul>
                 </>
             )}
+        </div>
+    );
+}
+
+function EditBalanceModal({ isOpen, onClose, onUpdated, balanceToEdit }) {
+    const [name, setName] = useState("");
+    const [currency, setCurrency] = useState("USD");
+    const [amount, setAmount] = useState(0);
+
+    // Pre-fill form when the modal opens or the selected balance changes
+    useEffect(() => {
+        if (isOpen && balanceToEdit) {
+            setName(balanceToEdit.name);
+            setCurrency(balanceToEdit.currency);
+            setAmount(formatDecimalString(balanceToEdit.amount));
+        }
+    }, [isOpen, balanceToEdit]);
+
+    if (!isOpen) return null;
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+
+        try {
+            const response = await fetch(backendUrl +`balance/${balanceToEdit.id}/`, {
+                method: "PATCH",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access'),
+                },
+                body: JSON.stringify({
+                    name: name,
+                    currency: currency,
+                    amount: amount
+                })
+            });
+
+            if (response.ok) {
+                onUpdated();
+                onClose();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    return (
+        <div className={"modalOverlay"}>
+            <div className={"modalContent"}>
+                <h2>Edit Balance</h2>
+
+                <form className={"verticalForm"} onSubmit={handleSubmit} >
+                    <div>
+                        <label className={"modalLabel"}>
+                            Name:
+                        </label>
+                        <input
+                            className={"modalInput"}
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className={"modalLabel"}>
+                            Currency:
+                        </label>
+                        <select
+                            className={"modalInput"}
+                            value={currency}
+                            onChange={e => setCurrency(e.target.value)}
+                        >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="UAH">UAH</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className={"modalLabel"}>
+                            Amount:
+                        </label>
+                        <input
+                            className={"modalInput"}
+                            type="number"
+                            value={amount}
+                            onChange={e => setAmount(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+                        <button type="submit" style={{ backgroundColor: '#070', border: 'none', padding: '8px 16px' }}>
+                            Save Changes
+                        </button>
+                        <button type="button" onClick={onClose} style={{ backgroundColor: '#700', border: 'none', padding: '8px 16px' }}>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
