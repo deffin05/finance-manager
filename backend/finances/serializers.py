@@ -28,4 +28,4 @@ class FileUploadSerializer(serializers.Serializer):
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
-        fields = '__all__'
+        fields = ['alpha_code', 'name', 'rate']
