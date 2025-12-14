@@ -21,5 +21,6 @@ class MonobankBalance(models.Model):
     amount = models.DecimalField(decimal_places=10, max_digits=30)
     watch = models.BooleanField(default=False)
 
+
 class MonobankTransaction(Transaction):
     monobank_id = models.CharField(max_length=100)

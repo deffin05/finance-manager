@@ -52,7 +52,6 @@ def fetch_monobank_report(token, balance_id, timestamp, user):
     }
 
     response = requests.get(url, headers=headers)
-    print(response.status_code)
     if response.ok:
         response_json = response.json()
 
@@ -104,7 +103,6 @@ class MonobankBalanceWatch(generics.UpdateAPIView):
     def perform_update(self, serializer):
         instance = serializer.save()
 
-        print(instance.watch)
         if instance.watch:
             balance = Balance.objects.create(
                 name=instance.name,
@@ -115,10 +113,12 @@ class MonobankBalanceWatch(generics.UpdateAPIView):
             instance.balance = balance
             instance.save()
 
+            monobank_user = MonobankUser.objects.get(user=self.request.user)
             timestamp = int((timezone.now() - timedelta(days=31)).timestamp())
-            print(timestamp)
-            fetch_monobank_report(MonobankUser.objects.get(user=self.request.user).token, instance.monobank_id,
+            fetch_monobank_report(monobank_user.token, instance.monobank_id,
                                   timestamp, self.request.user)
+
+            monobank_user.save()
         else:
             instance.balance.delete()
             instance.balance = None

@@ -10,10 +10,12 @@ class TokenSerializer(serializers.ModelSerializer):
         fields = ['user', 'token']
         read_only_fields = ['user']
 
+
 class MonobankBalanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonobankBalance
         fields = '__all__'
+
 
 class MonobankTransactionSerializer(serializers.ModelSerializer):
     class Meta:
