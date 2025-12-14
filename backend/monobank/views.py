@@ -44,7 +44,7 @@ def fetch_monobank_balances(token, user):
         return False
 
 
-def fetch_monobank_report(token, balance_id, timestamp, user):
+def fetch_monobank_report(token, balance_id, timestamp, user, adjust_balance=False):
     url = f"https://api.monobank.ua/personal/statement/{balance_id}/{timestamp}"
     headers = {
         "Content-Type": "application/json",
@@ -56,15 +56,19 @@ def fetch_monobank_report(token, balance_id, timestamp, user):
         response_json = response.json()
 
         for report in response_json:
+            balance = MonobankBalance.objects.get(monobank_id=balance_id).balance
             MonobankTransaction.objects.create(
                 name=report["description"],
                 category='-',
                 monobank_id=report["id"],
                 date=datetime.fromtimestamp(report["time"], tz=tz.utc),
                 amount=report["amount"] / 100,
-                balance=MonobankBalance.objects.get(monobank_id=balance_id).balance,
+                balance=balance,
                 user=user
             )
+            if adjust_balance:
+                balance.amount += report["amount"] / 100
+                balance.save()
 
 
 class TokenView(generics.CreateAPIView, generics.DestroyAPIView):
