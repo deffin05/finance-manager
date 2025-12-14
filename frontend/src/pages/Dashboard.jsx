@@ -114,6 +114,15 @@ function Balance({ refreshTrigger, balanceId, refreshFunction, setBalanceId, cur
     )
 }
 
+function formatDecimalString(number) {
+    let split = number.split('.')
+    while (split[1].length > 2 && split[1].charAt(split[1].length - 1) === "0") {
+        split[1] = split[1].slice(0, -1)
+    }
+
+    return split.join('.')
+}
+
 function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId }) {
     const [transactions, setTransactions] = useState([]);
 
@@ -207,6 +216,8 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
             <table>
                 <thead>
                     <tr>
+                        <th>Category</th>
+                        <th>Description</th>
                         <th>Amount</th>
                         <th>Date</th>
                         <th>Actions</th>
@@ -218,6 +229,8 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
 
                         return (
                             <tr key={transaction.id}>
+                                <td>{transaction.category}</td>
+                                <td>{transaction.name}</td>
                                 <td>
                                     {isEditing ? (
                                         <>
@@ -225,7 +238,7 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
                                                 type="number"
                                                 name="amount"
                                                 step={0.01}
-                                                value={formData.amount}
+                                                value={formatDecimalString(formData.amount)}
                                                 onChange={handleInputChange}
                                             />
                                         </>
@@ -403,7 +416,7 @@ function CreateBalanceModal({ isOpen, onClose, onCreated }) {
             <div className={"modalContent"}>
                 <h2>Create new balance</h2>
 
-                <form onSubmit={handleSubmit} >
+                <form className={"verticalForm"} onSubmit={handleSubmit} >
                     <div>
                         <label
                             className={"modalLabel"}

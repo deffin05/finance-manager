@@ -19,7 +19,7 @@ def fetch_exchange_rates():
     currency_object = pycountry.currencies.get(numeric="980")
     Currency.objects.update_or_create(
         num_code=currency_object.numeric,
-        alpha_code=currency_object.alpha_3,
+        id=currency_object.alpha_3,
         name=currency_object.name,
         rate=1,
     )
@@ -29,17 +29,21 @@ def fetch_exchange_rates():
         if rate["currencyCodeB"] != 980:
             continue
         code = rate["currencyCodeA"]
-        currency_object = pycountry.currencies.get(numeric=str(code))
+        currency_object = pycountry.currencies.get(numeric=f"{code:03}")
 
         if "rateCross" not in rate:
             rate["rateCross"] = rate["rateBuy"]
-
-        Currency.objects.update_or_create(
-            num_code=code,
-            alpha_code=currency_object.alpha_3,
-            name=currency_object.name,
-            rate=rate["rateCross"],
-        )
+        try:
+            Currency.objects.update_or_create(
+                num_code=code,
+                id=currency_object.alpha_3,
+                name=currency_object.name,
+                defaults={
+                    "rate":rate["rateCross"],
+                }
+            )
+        except Exception as e:
+            print(e)
 
 def fetch_crypto_rates():
     url = "https://api.coingecko.com/api/v3/coins/markets"

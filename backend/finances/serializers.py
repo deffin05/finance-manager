@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from finances.models import Transaction, Balance
+from finances.models import Transaction, Balance, Currency
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -24,3 +24,8 @@ class BalanceSerializer(serializers.ModelSerializer):
     
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+
+class CurrencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Currency
+        fields = '__all__'
