@@ -4,10 +4,10 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from finances.serializers import TransactionSerializer, BalanceSerializer, FileUploadSerializer
-from finances.models import Transaction, Balance
+from finances.serializers import TransactionSerializer, BalanceSerializer, FileUploadSerializer, CurrencySerializer
+from finances.models import Transaction, Balance, Currency
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 
@@ -154,3 +154,17 @@ class RefreshExchangeRates(APIView):
         #fetch_exchange_rates()
         fetch_crypto_rates()
         return Response({'status': 'exchange rates refreshed successfully'})
+    
+class CurrencyList(generics.ListAPIView):
+    serializer_class = CurrencySerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = Currency.objects.all()
+        search = self.request.query_params.get('search')
+        if search is not None:
+            queryset = queryset.filter(alpha_code__icontains = search)
+            if not queryset.exists() or queryset.count() == 0:
+                queryset = Currency.objects.all()
+                queryset = queryset.filter(name__icontains = search)
+        return queryset

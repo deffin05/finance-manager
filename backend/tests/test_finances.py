@@ -358,3 +358,30 @@ def test_balance_summation_with_crypto(api_client, user):
     expected_total = Decimal("200.00") + (Decimal("0.01") * Decimal("1000000.0"))
     
     assert Decimal(response.data['total_amount_uah']) == expected_total
+
+@pytest.mark.django_db
+def test_currency_list_endpoint(api_client, user):
+    """
+    Test that the CurrencyList API returns all currencies and supports searching.
+    """
+    Currency.objects.create(id="usd", alpha_code="USD", num_code=840, name="US Dollar", rate=1.0)
+    Currency.objects.create(id="eur", alpha_code="EUR", num_code=978, name="Euro", rate=1.1)
+    Currency.objects.create(id="bitcoin", alpha_code="BTC", num_code=0, name="Bitcoin", rate=50000.0)
+
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/currencies/")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 3
+
+    # Test searching by alpha_code
+    response = api_client.get("/currencies/?search=EUR")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]['alpha_code'] == "EUR"
+
+    #Test searching by name
+    response = api_client.get("/currencies/?search=Bitcoin")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]['alpha_code'] == "BTC"
