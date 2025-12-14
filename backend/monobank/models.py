@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-from finances.models import Balance, Currency
+from finances.models import Balance, Currency, Transaction
 
 
 # Create your models here.
@@ -20,3 +20,6 @@ class MonobankBalance(models.Model):
     monobank_id = models.CharField(max_length=100)
     amount = models.DecimalField(decimal_places=10, max_digits=30)
     watch = models.BooleanField(default=False)
+
+class MonobankTransaction(Transaction):
+    monobank_id = models.CharField(max_length=100)

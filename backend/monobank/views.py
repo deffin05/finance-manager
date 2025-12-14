@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import requests
 from rest_framework import generics
 from rest_framework.decorators import api_view
@@ -7,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from finances.models import Currency, Balance
-from monobank.models import MonobankUser, MonobankBalance
+from monobank.models import MonobankUser, MonobankBalance, MonobankTransaction
 from monobank.serializers import TokenSerializer, MonobankBalanceSerializer
 
 
@@ -38,6 +40,29 @@ def fetch_monobank_balances(token, user):
         return True
     else:
         return False
+
+
+def fetch_monobank_report(token, balance_id, timestamp, user):
+    url = f"https://api.monobank.ua/personal/statement/{balance_id}/{timestamp}"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Token": token,
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.ok:
+        response_json = response.json()
+
+        for report in response_json:
+            MonobankTransaction.objects.create(
+                name=report["description"],
+                category='-',
+                monobank_id=report["id"],
+                date=datetime.fromtimestamp(report["time"], tz=timezone.utc),
+                amount=report["amount"] / 100,
+                balance=MonobankBalance.objects.get(monobank_id=balance_id).balance,
+                user=user
+            )
 
 
 class TokenView(generics.CreateAPIView, generics.DestroyAPIView):
