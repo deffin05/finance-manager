@@ -125,7 +125,7 @@ def test_transaction_list_scope(api_client, user, balance):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data['count'] == 1
-    assert response.data['results'][0]['amount'] == '100.00'
+    assert Decimal(response.data['results'][0]['amount']) == Decimal('100.00')
 
 @pytest.mark.django_db
 def test_balance_list_scope(api_client, user, currency):
@@ -139,7 +139,7 @@ def test_balance_list_scope(api_client, user, currency):
 
     assert response.status_code == status.HTTP_200_OK
     assert len(response.data) == 1
-    assert response.data[0]['amount'] == '300.00'
+    assert Decimal(response.data[0]['amount']) == Decimal('300.00')
 
 @pytest.mark.django_db
 def test_user_cannot_create_transaction_spoofing_user(api_client, user, balance):
@@ -166,7 +166,7 @@ def test_user_cannot_create_transaction_spoofing_user(api_client, user, balance)
 
 @pytest.mark.django_db
 def test_list_balances_endpoint(api_client, user, currency):
-    btc = Currency.objects.create(alpha_code="BTC", num_code=0, name="Bitcoin", rate=50000)
+    btc = Currency.objects.create(alpha_code="BTC", num_code=0, name="Bitcoin", id = "bitcoin", rate=50000)
     
     Balance.objects.create(user=user, amount=100.00, currency=currency, name="Fiat")
     Balance.objects.create(user=user, amount=0.5, currency=btc, name="Crypto")
@@ -181,8 +181,8 @@ def test_list_balances_endpoint(api_client, user, currency):
     assert len(response.data) == 2
 
     currencies = [item['currency'] for item in response.data]
-    assert btc.alpha_code in currencies
-    assert currency.alpha_code in currencies
+    assert btc.id in currencies
+    assert currency.id in currencies
 
 @pytest.mark.django_db
 def test_list_transactions_sorting(api_client, user, balance):
@@ -313,3 +313,54 @@ def test_update_transaction_changes_balance(api_client, user, balance):
     expected_amount = initial_balance_amount - old_amount + new_amount
     
     assert balance.amount == expected_amount
+
+@pytest.mark.django_db
+def test_get_balance_summation(api_client, user, currency):
+    """
+    Test that the BalanceSumm API returns the correct total amount in UAH.
+    """
+    uah_currency = currency
+    eur_currency = Currency.objects.create(alpha_code="EUR", num_code=978, name="Euro", rate=40.00)
+
+    Balance.objects.create(user=user, amount=100.00, currency=uah_currency, name="UAH Balance")
+    Balance.objects.create(user=user, amount=5.00, currency=eur_currency, name="EUR Balance")
+
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/balance/summ/")
+
+    assert response.status_code == status.HTTP_200_OK
+
+    expected_total = Decimal("100.00") + (Decimal("5.00") * Decimal("40.00"))
+    
+    assert Decimal(response.data['total_amount_uah']) == expected_total
+
+@pytest.mark.django_db
+def test_balance_summation_with_no_balances(api_client, user):
+    """
+    Test that the BalanceSumm API returns zero when the user has no balances.
+    """
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/balance/summ/")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert Decimal(response.data['total_amount_uah']) == Decimal("0")
+
+@pytest.mark.django_db
+def test_balance_summation_with_crypto(api_client, user):
+    """
+    Test that the BalanceSumm API correctly sums balances including crypto currencies.
+    """
+    uah_currency = Currency.objects.create(alpha_code="UAH", num_code=980, name="Ukrainian Hryvnia", rate=1.0)
+    btc_currency = Currency.objects.create(alpha_code="BTC", num_code=0, name="Bitcoin", rate=1000000.0)
+
+    Balance.objects.create(user=user, amount=200.00, currency=uah_currency, name="UAH Balance")
+    Balance.objects.create(user=user, amount=0.01, currency=btc_currency, name="BTC Balance")
+
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/balance/summ/")
+
+    assert response.status_code == status.HTTP_200_OK
+
+    expected_total = Decimal("200.00") + (Decimal("0.01") * Decimal("1000000.0"))
+    
+    assert Decimal(response.data['total_amount_uah']) == expected_total

@@ -15,3 +15,9 @@ class BalanceSerializer(serializers.ModelSerializer):
         model = Balance
         fields = '__all__'
         read_only_fields = ['user']
+
+    def get_amount(self, obj):
+        # Convert to decimal, normalize removes trailing zeros
+        # formatting ensures we don't get scientific notation (1E+2)
+        value = obj.amount.normalize() 
+        return "{:f}".format(value)

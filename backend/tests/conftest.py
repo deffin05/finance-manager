@@ -26,6 +26,7 @@ def user(user_data):
 @pytest.fixture
 def currency():
     return Currency.objects.create(
+        id = "usd",
         alpha_code="USD", 
         num_code=840, 
         name="US Dollar", 
@@ -35,6 +36,7 @@ def currency():
 @pytest.fixture
 def eur_currency():
     return Currency.objects.create(
+        id = "eur",
         alpha_code="EUR", 
         num_code=978, 
         name="Euro", 

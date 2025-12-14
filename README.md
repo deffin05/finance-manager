@@ -25,3 +25,27 @@ integrations with Monobank and probably other financial institutions.
 ## Team
 - Dmytro Melnyk
 - Konstantin Sadykov
+
+## Set-up
+
+### Set environment variables in .env
+```
+DJANGO_SECRET_KEY="YOUR_KEY"
+COINGECKO_API_KEY = "YOUR_API_KEY"
+```
+
+### Install dependencies
+```bash
+pip install requirements.txt
+```
+
+### Run migrations
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### Run server
+```bash
+python manage.py runserver
+```
