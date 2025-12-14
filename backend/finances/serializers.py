@@ -19,11 +19,13 @@ class BalanceSerializer(serializers.ModelSerializer):
     def get_amount(self, obj):
         # Convert to decimal, normalize removes trailing zeros
         # formatting ensures we don't get scientific notation (1E+2)
-        value = obj.amount.normalize() 
+        value = obj.amount.normalize()
         return "{:f}".format(value)
-    
+
+
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+
 
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:

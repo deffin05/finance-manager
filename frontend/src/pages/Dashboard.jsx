@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { backendUrl } from "../App";
+import {useEffect, useState} from "react";
+import {backendUrl} from "../App";
 import DeleteIcon from './../assets/delete.svg';
 import EditIcon from './../assets/edit.svg';
 
@@ -22,6 +22,7 @@ async function getBalances(setBalances, setBalanceId, setCurrency, loaded) {
         console.error(error);
     }
 }
+
 export default function Dashboard() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [balanceId, setBalanceId] = useState("");
@@ -39,6 +40,7 @@ export default function Dashboard() {
             await getBalances(setBalances, setBalanceId, setCurrency, isBalancesLoaded);
             setIsBalancesLoaded(true)
         }
+
         load()
     }, [refreshKey])
 
@@ -47,7 +49,7 @@ export default function Dashboard() {
         const formData = new FormData()
         const file = event.target.files[0];
 
-        formData.append('file',file)
+        formData.append('file', file)
 
         const response = await fetch(backendUrl + `import/?balance_id=${balanceId}`, {
             method: "POST",
@@ -93,8 +95,8 @@ export default function Dashboard() {
                 <>
                     <div
                         style={{
-                            display:"flex",
-                            justifyContent:"space-between"
+                            display: "flex",
+                            justifyContent: "space-between"
                         }}
                     >
                         <input
@@ -106,31 +108,33 @@ export default function Dashboard() {
                         <label
                             htmlFor={"fileUpload"}
                             style={{
-                                backgroundColor:"#222",
-                                color:"#fff",
-                                padding:"8px",
-                                borderRadius:"4px",
-                                cursor:"pointer"
+                                backgroundColor: "#222",
+                                color: "#fff",
+                                padding: "8px",
+                                borderRadius: "4px",
+                                cursor: "pointer"
                             }}
                         >Upload payment statement</label>
 
                         <div
-                        style={{
-                            display:"flex",
-                            gap:"8px"
-                        }}>
+                            style={{
+                                display: "flex",
+                                gap: "8px"
+                            }}>
                             <button
                                 style={{
-                                    backgroundColor:"#00c"
+                                    backgroundColor: "#00c"
                                 }}
                                 onClick={handleEditBalance}
-                            >Edit</button>
+                            >Edit
+                            </button>
                             <button
                                 style={{
-                                    backgroundColor:"#c00"
+                                    backgroundColor: "#c00"
                                 }}
                                 onClick={handleDeleteBalance}
-                            >Delete</button>
+                            >Delete
+                            </button>
                         </div>
                     </div>
                     <Balance
@@ -162,7 +166,7 @@ export default function Dashboard() {
     );
 }
 
-function Balance({ refreshTrigger, balanceId, refreshFunction, setBalanceId, currency, setCurrency, balances}) {
+function Balance({refreshTrigger, balanceId, refreshFunction, setBalanceId, currency, setCurrency, balances}) {
     const [currentAmount, setCurrentAmount] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -196,14 +200,14 @@ function Balance({ refreshTrigger, balanceId, refreshFunction, setBalanceId, cur
             />
 
             <h2>
-                {new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(currentAmount)} {currency}
+                {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
             </h2>
 
             <CreateBalanceModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onCreated={refreshFunction}
-        />
+            />
         </>
     )
 }
@@ -217,14 +221,14 @@ function formatDecimalString(number) {
     return split.join('.')
 }
 
-function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId }) {
+function TransactionList({refreshTrigger, refreshFunction, currency, balanceId}) {
     const [transactions, setTransactions] = useState([]);
 
     const [nextPageUrl, setNextPageUrl] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const [editRowId, setEditRowId] = useState(null);
-    const [formData, setFormData] = useState({ amount: 0, date: "", currency: "USD" });
+    const [formData, setFormData] = useState({amount: 0, date: "", currency: "USD"});
 
     async function getTransactions(url, isLoadMore = false) {
         setIsLoading(true);
@@ -266,11 +270,11 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
         setEditRowId(transaction.id);
         let local_date = new Date(transaction.date);
         local_date.setMinutes(local_date.getMinutes() - local_date.getTimezoneOffset())
-        setFormData({ amount: transaction.amount, date: local_date.toISOString().slice(0, 19), currency: "USD" });
+        setFormData({amount: transaction.amount, date: local_date.toISOString().slice(0, 19), currency: "USD"});
     };
 
     const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFormData({...formData, [e.target.name]: e.target.value});
     };
 
     const handleSave = async (transaction) => {
@@ -287,7 +291,7 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('access'),
                 },
-                body: JSON.stringify({ ...formData, date: utc_date})
+                body: JSON.stringify({...formData, date: utc_date})
             });
 
             if (response.ok) {
@@ -309,86 +313,88 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
         <>
             <table>
                 <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
+                <tr>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                    {transactions.map((transaction) => {
-                        const isEditing = editRowId === transaction.id;
+                {transactions.map((transaction) => {
+                    const isEditing = editRowId === transaction.id;
 
-                        return (
-                            <tr key={transaction.id}>
-                                <td>{transaction.category}</td>
-                                <td>{transaction.name}</td>
-                                <td>
-                                    {isEditing ? (
-                                        <>
-                                            <input
-                                                type="number"
-                                                name="amount"
-                                                step={0.01}
-                                                value={formatDecimalString(formData.amount)}
-                                                onChange={handleInputChange}
-                                            />
-                                        </>
-                                    ) : (
-                                        `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(transaction.amount)} ${currency}`
-                                    )}
-                                </td>
-                                <td>
-                                    {isEditing ? (
+                    return (
+                        <tr key={transaction.id}>
+                            <td>{transaction.category}</td>
+                            <td>{transaction.name}</td>
+                            <td>
+                                {isEditing ? (
+                                    <>
                                         <input
-                                            type="datetime-local"
-                                            name="date"
-                                            step={1}
-                                            value={formData.date}
+                                            type="number"
+                                            name="amount"
+                                            step={0.01}
+                                            value={formatDecimalString(formData.amount)}
                                             onChange={handleInputChange}
                                         />
+                                    </>
+                                ) : (
+                                    `${new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(transaction.amount)} ${currency}`
+                                )}
+                            </td>
+                            <td>
+                                {isEditing ? (
+                                    <input
+                                        type="datetime-local"
+                                        name="date"
+                                        step={1}
+                                        value={formData.date}
+                                        onChange={handleInputChange}
+                                    />
+                                ) : (
+                                    new Date(transaction.date).toLocaleString()
+                                )}
+                            </td>
+                            <td>
+                                <div style={{display: "flex", gap: "8px"}}>
+                                    {isEditing ? (
+                                        <>
+                                            <button onClick={() => handleSave(transaction)}
+                                                    className="iconButton editButton">
+                                                Save
+                                            </button>
+                                            <button onClick={handleCancel} className="iconButton deleteButton"
+                                                    style={{width: 72}}>
+                                                Cancel
+                                            </button>
+                                        </>
                                     ) : (
-                                        new Date(transaction.date).toLocaleString()
-                                    )}
-                                </td>
-                                <td>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        {isEditing ? (
-                                            <>
-                                                <button onClick={() => handleSave(transaction)} className="iconButton editButton">
-                                                    Save
-                                                </button>
-                                                <button onClick={handleCancel} className="iconButton deleteButton" style={{ width: 72 }}>
-                                                    Cancel
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <EditButton onClick={() => handleEditClick(transaction)} />
+                                        <>
+                                            <EditButton onClick={() => handleEditClick(transaction)}/>
 
-                                                <DeleteButton
-                                                    transaction={transaction}
-                                                    refreshFunction={refreshFunction}
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        )
-                    })}
+                                            <DeleteButton
+                                                transaction={transaction}
+                                                refreshFunction={refreshFunction}
+                                            />
+                                        </>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    )
+                })}
                 </tbody>
             </table>
 
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{marginTop: '20px', textAlign: 'center'}}>
                 {isLoading && <p>Loading...</p>}
 
                 {!isLoading && nextPageUrl && (
                     <button
                         onClick={handleLoadMore}
-                        style={{ padding: '10px 20px', cursor: 'pointer' }}
+                        style={{padding: '10px 20px', cursor: 'pointer'}}
                     >
                         Load More
                     </button>
@@ -399,7 +405,7 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
     )
 }
 
-function TransactionForm({ refreshFunction, balanceId }) {
+function TransactionForm({refreshFunction, balanceId}) {
     async function handleSubmit(event) {
         event.preventDefault();
         const data = JSON.stringify({
@@ -420,29 +426,30 @@ function TransactionForm({ refreshFunction, balanceId }) {
             refreshFunction();
         }
     }
+
     return (
         <>
             <form id='transactionForm' onSubmit={handleSubmit}>
                 <div>
                     <label form='amount'>Amount</label>
-                    <input type='number' name='amount' step={0.01} required />
+                    <input type='number' name='amount' step={0.01} required/>
                 </div>
-                <input type='submit' value="Add transaction" />
-            </form >
+                <input type='submit' value="Add transaction"/>
+            </form>
         </>
     )
 }
 
-function EditButton({ onClick }) {
+function EditButton({onClick}) {
 
     return (
         <>
-            <button className="editButton iconButton" onClick={onClick}><img src={EditIcon} className="icon" /></button>
+            <button className="editButton iconButton" onClick={onClick}><img src={EditIcon} className="icon"/></button>
         </>
     )
 }
 
-function DeleteButton({ transaction, refreshFunction }) {
+function DeleteButton({transaction, refreshFunction}) {
 
     async function handle(event) {
         event.preventDefault();
@@ -462,12 +469,13 @@ function DeleteButton({ transaction, refreshFunction }) {
 
     return (
         <>
-            <button className="deleteButton iconButton" onClick={handle}><img src={DeleteIcon} className="icon" /></button>
+            <button className="deleteButton iconButton" onClick={handle}><img src={DeleteIcon} className="icon"/>
+            </button>
         </>
     )
 }
 
-function CreateBalanceModal({ isOpen, onClose, onCreated }) {
+function CreateBalanceModal({isOpen, onClose, onCreated}) {
     const [name, setName] = useState("");
     const [currency, setCurrency] = useState("USD");
     const [initialAmount, setInitialAmount] = useState(0);
@@ -510,12 +518,12 @@ function CreateBalanceModal({ isOpen, onClose, onCreated }) {
             <div className={"modalContent"}>
                 <h2>Create new balance</h2>
 
-                <form className={"verticalForm"} onSubmit={handleSubmit} >
+                <form className={"verticalForm"} onSubmit={handleSubmit}>
                     <div>
                         <label
                             className={"modalLabel"}
                             form="name">
-                            Name<span style={{"color":"#777", "fontSize":"0.8em"}}> (optional)</span>:
+                            Name<span style={{"color": "#777", "fontSize": "0.8em"}}> (optional)</span>:
                         </label>
                         <input
                             className={"modalInput"}
@@ -559,7 +567,7 @@ function CreateBalanceModal({ isOpen, onClose, onCreated }) {
                             step="0.01"
                         />
                     </div>
-                    <button type="submit" style={{ cursor: 'pointer', backgroundColor: '#7e854b', border: 'none' }}>
+                    <button type="submit" style={{cursor: 'pointer', backgroundColor: '#7e854b', border: 'none'}}>
                         Create Account
                     </button>
                 </form>
@@ -569,7 +577,7 @@ function CreateBalanceModal({ isOpen, onClose, onCreated }) {
 }
 
 
-function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunction }) {
+function CustomDropdown({options, selectedId, onChange, openModal, refreshFunction}) {
     const [isOpen, setIsOpen] = useState(false);
     const selectedItem = options.find(o => o.id.toString() === selectedId.toString());
 
@@ -585,14 +593,14 @@ function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunct
                         ? `${selectedItem.currency} - ${selectedItem.name}`
                         : "All Accounts"}
                 </span>
-                <span style={{ fontSize: '0.8em', marginLeft: '10px' }}>▼</span>
+                <span style={{fontSize: '0.8em', marginLeft: '10px'}}>▼</span>
             </div>
 
             {isOpen && (
                 <>
                     {/* Invisible overlay to close menu when clicking outside */}
                     <div
-                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}
+                        style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1}}
                         onClick={() => setIsOpen(false)}
                     />
 
@@ -601,21 +609,28 @@ function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunct
                             <li
                                 key={b.id}
                                 className={"balanceItem"}
-                                onClick={() => { onChange(b.id); setIsOpen(false); refreshFunction()}}
+                                onClick={() => {
+                                    onChange(b.id);
+                                    setIsOpen(false);
+                                    refreshFunction()
+                                }}
                                 style={{
                                     backgroundColor: selectedId === b.id ? '#fff2dc' : 'white',
                                 }}
                             >
-                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                                <div style={{fontWeight: 'bold', fontSize: '1rem'}}>
                                     {b.name} ({b.currency})
                                 </div>
-                                <div style={{ color: '#666', fontSize: '0.85rem' }}>
-                                    Balance: {new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(b.amount)}
+                                <div style={{color: '#666', fontSize: '0.85rem'}}>
+                                    Balance: {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(b.amount)}
                                 </div>
                             </li>
                         ))}
                         <li
-                            onClick={() => { setIsOpen(false); openModal(true)}}
+                            onClick={() => {
+                                setIsOpen(false);
+                                openModal(true)
+                            }}
                             className={"balanceItem"}
                             style={{
                                 backgroundColor: 'white'
@@ -630,7 +645,7 @@ function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunct
     );
 }
 
-function EditBalanceModal({ isOpen, onClose, onUpdated, balanceToEdit }) {
+function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
     const [name, setName] = useState("");
     const [currency, setCurrency] = useState("USD");
     const [amount, setAmount] = useState(0);
@@ -650,7 +665,7 @@ function EditBalanceModal({ isOpen, onClose, onUpdated, balanceToEdit }) {
         e.preventDefault();
 
         try {
-            const response = await fetch(backendUrl +`balance/${balanceToEdit.id}/`, {
+            const response = await fetch(backendUrl + `balance/${balanceToEdit.id}/`, {
                 method: "PATCH",
                 headers: {
                     'Content-Type': 'application/json',
@@ -677,7 +692,7 @@ function EditBalanceModal({ isOpen, onClose, onUpdated, balanceToEdit }) {
             <div className={"modalContent"}>
                 <h2>Edit Balance</h2>
 
-                <form className={"verticalForm"} onSubmit={handleSubmit} >
+                <form className={"verticalForm"} onSubmit={handleSubmit}>
                     <div>
                         <label className={"modalLabel"}>
                             Name:
@@ -718,10 +733,11 @@ function EditBalanceModal({ isOpen, onClose, onUpdated, balanceToEdit }) {
                     </div>
 
                     <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
-                        <button type="submit" style={{ backgroundColor: '#070', border: 'none', padding: '8px 16px' }}>
+                        <button type="submit" style={{backgroundColor: '#070', border: 'none', padding: '8px 16px'}}>
                             Save Changes
                         </button>
-                        <button type="button" onClick={onClose} style={{ backgroundColor: '#700', border: 'none', padding: '8px 16px' }}>
+                        <button type="button" onClick={onClose}
+                                style={{backgroundColor: '#700', border: 'none', padding: '8px 16px'}}>
                             Cancel
                         </button>
                     </div>
