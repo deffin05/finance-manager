@@ -403,7 +403,7 @@ function CreateBalanceModal({ isOpen, onClose, onCreated }) {
             <div className={"modalContent"}>
                 <h2>Create new balance</h2>
 
-                <form onSubmit={handleSubmit} >
+                <form className={"verticalForm"} onSubmit={handleSubmit} >
                     <div>
                         <label
                             className={"modalLabel"}
