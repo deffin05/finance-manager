@@ -6,7 +6,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from finances.models import Currency
+from finances.models import Currency, Balance
 from monobank.models import MonobankUser, MonobankBalance
 from monobank.serializers import TokenSerializer, MonobankBalanceSerializer
 
@@ -31,7 +31,7 @@ def fetch_monobank_balances(token, user):
                     "amount": balance["balance"] / 100,
                     "name": balance["type"],
                     "currency": Currency.objects.get(num_code=balance["currencyCode"]),
-                    "user": user
+                    "user": MonobankUser.objects.get(user=user),
                 }
             )
 
@@ -40,7 +40,7 @@ def fetch_monobank_balances(token, user):
         return False
 
 
-class TokenView(generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView):
+class TokenView(generics.CreateAPIView, generics.DestroyAPIView):
     serializer_class = TokenSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -62,15 +62,33 @@ class MonobankBalanceList(generics.ListAPIView):
     serializer_class = MonobankBalanceSerializer
 
     def get_queryset(self):
-        queryset = MonobankBalance.objects.all().filter(user=self.request.user)
+        queryset = MonobankBalance.objects.all().filter(user=MonobankUser.objects.get(user=self.request.user))
         return queryset
 
 
 class MonobankBalanceWatch(generics.UpdateAPIView):
     serializer_class = MonobankBalanceSerializer
+
     def get_queryset(self):
-        queryset = MonobankBalance.objects.all().filter(user=self.request.user)
+        queryset = MonobankBalance.objects.all().filter(user=MonobankUser.objects.get(user=self.request.user))
         return queryset
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+
+        if instance.watch:
+            balance = Balance.objects.create(
+                name=instance.name,
+                user=self.request.user,
+                amount=instance.amount,
+                currency=instance.currency,
+            )
+            instance.balance = balance
+            instance.save()
+        else:
+            instance.balance.delete()
+            instance.balance = None
+            instance.save()
 
 
 @api_view(['GET'])
