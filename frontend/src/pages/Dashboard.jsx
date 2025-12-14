@@ -3,57 +3,118 @@ import { backendUrl } from "../App";
 import DeleteIcon from './../assets/delete.svg';
 import EditIcon from './../assets/edit.svg';
 
+async function getBalances(setBalances, setBalanceId, setCurrency, loaded) {
+    try {
+        const response = await fetch(backendUrl + 'balance/', {
+            method: "GET",
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('access'),
+            },
+        });
+        const balances = await response.json();
+        setBalances(balances);
+        if (!loaded && balances.length > 0) {
+            setBalanceId(balances[0].id)
+            setCurrency(balances[0].currency)
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
 export default function Dashboard() {
     const [refreshKey, setRefreshKey] = useState(0);
+    const [balanceId, setBalanceId] = useState("");
+    const [currency, setCurrency] = useState('');
+    const [balances, setBalances] = useState([]);
+    const [isBalancesLoaded, setIsBalancesLoaded] = useState(false);
 
-    // 2. A function to toggle the state
     const refreshData = () => {
         setRefreshKey(oldKey => oldKey + 1);
     }
 
+    useEffect(() => {
+        async function load() {
+            await getBalances(setBalances, setBalanceId, setCurrency, isBalancesLoaded);
+            setIsBalancesLoaded(true)
+        }
+        load()
+    }, [refreshKey])
+
     return (
         <div>
-            <Balance refreshTrigger={refreshKey} />
-            <TransactionList refreshTrigger={refreshKey} refreshFunction={refreshData} />
-            <TransactionForm refreshFunction={refreshData} />
+            {isBalancesLoaded ?
+                <>
+                    <Balance
+                        refreshTrigger={refreshKey}
+                        balanceId={balanceId}
+                        refreshFunction={refreshData}
+                        setBalanceId={setBalanceId}
+                        currency={currency}
+                        setCurrency={setCurrency}
+                        balances={balances}
+                    />
+                    <TransactionList
+                        refreshTrigger={refreshKey}
+                        refreshFunction={refreshData}
+                        balanceId={balanceId}
+                        currency={currency}
+                    />
+                    <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                </> :
+                <p>Loading...</p>
+            }
         </div>
     );
 }
 
-function Balance({ refreshTrigger }) {
-    const [balance, setBalance] = useState(null);
+function Balance({ refreshTrigger, balanceId, refreshFunction, setBalanceId, currency, setCurrency, balances}) {
+    const [currentAmount, setCurrentAmount] = useState(0);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        async function getBalance() {
-            try {
-                const balanceResponse = await fetch(backendUrl + 'balance/', {
-                    method: "GET",
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('access'),
-                    },
-                });
-                const balanceJSON = await balanceResponse.json();
-                if (!balanceJSON[0]) {
-                    setBalance(0);
-                } else {
-                    // adjust this depending on the API shape; using first item or a value field
-                    setBalance(new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(balanceJSON[0].amount) ?? balanceJSON[0]);
-                }
-            } catch (error) {
-                console.error(error);
-            }
+        if (balances.length === 0) {
+            setIsModalOpen(true);
+            setCurrentAmount(0);
         }
-        getBalance();
     }, [refreshTrigger]);
+
+    useEffect(() => {
+        if (!balances.length) {
+            setCurrentAmount(0);
+            return;
+        }
+        const selected = balances.find(b => b.id.toString() === balanceId.toString());
+        setCurrentAmount(selected ? selected.amount : 0);
+        setCurrency(selected.currency)
+    }, [balanceId, balances]);
+
     return (
         <>
-            <h3>Balance: ${balance}</h3>
+            <h3>Balance: </h3>
+
+            <CustomDropdown
+                options={balances}
+                selectedId={balanceId}
+                onChange={setBalanceId}
+                openModal={setIsModalOpen}
+                refreshFunction={refreshFunction}
+            />
+
+            <h2>
+                {new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(currentAmount)} {currency}
+            </h2>
+
+            <CreateBalanceModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onCreated={refreshFunction}
+        />
         </>
     )
 }
 
-function TransactionList({ refreshTrigger, refreshFunction }) {
+function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId }) {
     const [transactions, setTransactions] = useState([]);
 
     const [nextPageUrl, setNextPageUrl] = useState(null);
@@ -75,10 +136,8 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
 
             const transactions = await transactionsResponse.json();
             if (isLoadMore) {
-                // If loading more, append to existing list
                 setTransactions(prev => [...prev, ...transactions.results]);
             } else {
-                // If initial load or refresh, overwrite list
                 setTransactions(transactions.results);
             }
 
@@ -91,7 +150,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
     }
 
     useEffect(() => {
-        getTransactions(backendUrl + 'transactions/', false);
+        getTransactions(backendUrl + `balance/${balanceId}/transactions/`, false);
     }, [refreshTrigger]);
 
     function handleLoadMore() {
@@ -120,7 +179,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
         }
         try {
             const response = await fetch(`${backendUrl}transactions/${transaction.id}/`, {
-                method: "PUT",
+                method: "PATCH",
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('access'),
@@ -145,7 +204,6 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
 
     return (
         <>
-            <h3>Transactions:</h3>
             <table>
                 <thead>
                     <tr>
@@ -163,7 +221,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                 <td>
                                     {isEditing ? (
                                         <>
-                                            $<input
+                                            <input
                                                 type="number"
                                                 name="amount"
                                                 step={0.01}
@@ -172,7 +230,7 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
                                             />
                                         </>
                                     ) : (
-                                        `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(transaction.amount)}`
+                                        `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(transaction.amount)} ${currency}`
                                     )}
                                 </td>
                                 <td>
@@ -234,11 +292,14 @@ function TransactionList({ refreshTrigger, refreshFunction }) {
     )
 }
 
-function TransactionForm({ refreshFunction }) {
+function TransactionForm({ refreshFunction, balanceId }) {
     async function handleSubmit(event) {
         event.preventDefault();
-        const data = JSON.stringify(Object.fromEntries(new FormData(document.forms['transactionForm']).entries()));
-        const response = await fetch(backendUrl + 'transactions/',
+        const data = JSON.stringify({
+            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries()),
+            "category": "-"
+        });
+        const response = await fetch(backendUrl + `balance/${balanceId}/transactions/`,
             {
                 method: "POST",
                 headers: {
@@ -255,14 +316,6 @@ function TransactionForm({ refreshFunction }) {
     return (
         <>
             <form id='transactionForm' onSubmit={handleSubmit}>
-                <div>
-                    <label form='currency'>Currency</label>
-                    <select name="currency" id="currency" required>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="UAH">UAH</option>
-                    </select>
-                </div>
                 <div>
                     <label form='amount'>Amount</label>
                     <input type='number' name='amount' step={0.01} required />
@@ -305,4 +358,167 @@ function DeleteButton({ transaction, refreshFunction }) {
             <button className="deleteButton iconButton" onClick={handle}><img src={DeleteIcon} className="icon" /></button>
         </>
     )
+}
+
+function CreateBalanceModal({ isOpen, onClose, onCreated }) {
+    const [name, setName] = useState("");
+    const [currency, setCurrency] = useState("USD");
+    const [initialAmount, setInitialAmount] = useState(0);
+
+    if (!isOpen) return null;
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        let balanceName = name
+        if (balanceName === "") {
+            balanceName = `${currency} balance`
+        }
+        try {
+            const response = await fetch(backendUrl + 'balance/', { // Adjust URL if different
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access'),
+                },
+                body: JSON.stringify({
+                    name: balanceName,
+                    currency: currency,
+                    amount: initialAmount
+                })
+            });
+
+            if (response.ok) {
+                onCreated();
+                onClose();
+            } else {
+                alert("Failed to create balance");
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    return (
+        <div className={"modalOverlay"}>
+            <div className={"modalContent"}>
+                <h2>Create new balance</h2>
+
+                <form onSubmit={handleSubmit} >
+                    <div>
+                        <label
+                            className={"modalLabel"}
+                            form="name">
+                            Name<span style={{"color":"#777", "fontSize":"0.8em"}}> (optional)</span>:
+                        </label>
+                        <input
+                            className={"modalInput"}
+                            name="name"
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label
+                            className={"modalLabel"}
+                            form="currency">
+                            Currency:
+                        </label>
+                        <select
+                            name="currency"
+                            className={"modalInput"}
+                            value={currency}
+                            onChange={e => setCurrency(e.target.value)}
+                        >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="UAH">UAH</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label
+                            className={"modalLabel"}
+                            form="amount">
+                            Initial amount:
+                        </label>
+                        <input
+                            className={"modalInput"}
+                            type="number"
+                            name="amount"
+                            placeholder="Initial Amount"
+                            value={initialAmount}
+                            onChange={e => setInitialAmount(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+                    <button type="submit" style={{ cursor: 'pointer', backgroundColor: '#7e854b', border: 'none' }}>
+                        Create Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+
+function CustomDropdown({ options, selectedId, onChange, openModal, refreshFunction }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedItem = options.find(o => o.id.toString() === selectedId.toString());
+
+    return (
+        <div className={"balanceDisplayParent"}>
+
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={"balanceDisplay"}
+            >
+                <span>
+                    {selectedItem
+                        ? `${selectedItem.currency} - ${selectedItem.name}`
+                        : "All Accounts"}
+                </span>
+                <span style={{ fontSize: '0.8em', marginLeft: '10px' }}>▼</span>
+            </div>
+
+            {isOpen && (
+                <>
+                    {/* Invisible overlay to close menu when clicking outside */}
+                    <div
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}
+                        onClick={() => setIsOpen(false)}
+                    />
+
+                    <ul className={"balanceList"}>
+                        {options.map((b) => (
+                            <li
+                                key={b.id}
+                                className={"balanceItem"}
+                                onClick={() => { onChange(b.id); setIsOpen(false); refreshFunction()}}
+                                style={{
+                                    backgroundColor: selectedId === b.id ? '#fff2dc' : 'white',
+                                }}
+                            >
+                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                                    {b.name} ({b.currency})
+                                </div>
+                                <div style={{ color: '#666', fontSize: '0.85rem' }}>
+                                    Balance: {new Intl.NumberFormat("en-US", { minimumFractionDigits: 2 }).format(b.amount)}
+                                </div>
+                            </li>
+                        ))}
+                        <li
+                            onClick={() => { setIsOpen(false); openModal(true)}}
+                            className={"balanceItem"}
+                            style={{
+                                backgroundColor: 'white'
+                            }}
+                        >
+                            <span style={{fontWeight: 'bold'}}>Create new balance</span>
+                        </li>
+                    </ul>
+                </>
+            )}
+        </div>
+    );
 }

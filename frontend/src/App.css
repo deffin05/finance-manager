@@ -55,3 +55,84 @@ input[type="submit"] {
     width: 100%;
     height: auto;
 }
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background-color: #fff7e5;
+    padding: 40px;
+    border-radius: 2px;
+    width: 400px;
+    max-width: 90%;
+    text-align: center;
+}
+
+.modalContent > form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modalContent > form > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.modalInput {
+    padding: 8px;
+}
+
+.modalLabel {
+    text-align: left;
+}
+
+.balanceDisplayParent {
+    width: 100%;
+    position: relative;
+    display: inline-block;
+}
+
+.balanceDisplay {
+    padding: 8px;
+    background-color: #ffeeb8;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.balanceList {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid #ccc;
+    background-color: #aa9b7c;
+    border-radius: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    z-index: 2;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.balanceItem {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
