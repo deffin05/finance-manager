@@ -1,10 +1,15 @@
 from rest_framework import serializers
 
-from monobank.models import MonobankUser
+from monobank.models import MonobankUser, MonobankBalance
 
 
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonobankUser
         fields = ['user', 'token']
-        readonly_fields = ['user']
+        read_only_fields = ['user']
+
+class MonobankBalanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MonobankBalance
+        fields = '__all__'
