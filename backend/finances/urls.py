@@ -1,6 +1,6 @@
 from django.urls import path
 
-from finances.views import TransactionList, TransactionDetail, BalanceDetail, BalanceList, BalanceSumm
+from finances.views import TransactionList, TransactionDetail, BalanceDetail, BalanceList, BalanceSumm, ProcessFileUpload, RefreshExchangeRates
 
 urlpatterns = [
     path('transactions/<int:pk>/', TransactionDetail.as_view()),
@@ -9,4 +9,7 @@ urlpatterns = [
 
     path('balance/<int:pk>/transactions/', TransactionList.as_view()),
     path('balance/summ/', BalanceSumm.as_view()),
+
+    path('import/', ProcessFileUpload.as_view()),
+    path('exchange-rates/refresh/', RefreshExchangeRates.as_view()),
 ]

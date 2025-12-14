@@ -1,7 +1,12 @@
 import pycountry
 import requests
 import os 
+import json
 import pandas as pd
+import dotenv
+from pathlib import Path
+
+dotenv.load_dotenv()
 
 from finances.models import Currency, Transaction, Balance
 
@@ -61,9 +66,10 @@ def fetch_crypto_rates():
         name=currency_object.name,
         rate=1,
     )
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
     for coin in response.json():
-        id = coin["id"]
+        id_val = coin["id"]
         alpha_code = coin["symbol"].upper()
         name = coin["name"]
         rate = coin["current_price"]
@@ -73,7 +79,7 @@ def fetch_crypto_rates():
             alpha_code=alpha_code,
             name=name,
             rate=rate,
-            id=id
+            id=id_val
         )
     
 COLUMN_MAPPING = {
@@ -100,21 +106,155 @@ COLUMN_MAPPING = {
     ]
 }
 
+CATEGORY_MAPPING = {
+    '0742': [
+        'Animals',
+        'Тварини'
+    ],
+    '4111': [
+        'Transport',
+        'Транспорт'
+    ],
+    '4112': [
+        'Train tickets',
+        'Квитки на поїзд'
+    ],
+    '4814': [
+        'Mobile top-up',
+        'Поповнення мобільного'
+    ],
+    '4829': [
+        'Transfers',
+        'Перекази'
+    ],
+    '5211': [
+        'Home and repair',
+        'Дім та ремонт'
+    ],
+    '5297': [
+        'Online stores',
+        'Інтернет-магазини'
+    ],
+    '5411': [
+        'Supermarkets and groceries',
+        'Супермаркети та продукти'
+    ],
+    '5651': [
+        'Clothes and shoes',
+        'Одяг та взуття'
+    ],
+    '5812': [
+        'Restaurants, cafes, bars',
+        'Ресторани, кафе, бари'
+    ],
+    '5912': [
+        'Pharmacies',
+        'Аптеки'
+    ],
+    '5942': [
+        'Books and stationery',
+        'Книги та канцтовари'
+    ],
+    '6011': [
+        'Cash withdrawal',
+        'Зняття готівки'
+    ],
+    '6012': [
+        'Loans',
+        'Кредити'
+    ],
+    '6531': [
+        'Payments by details',
+        'Платежі за реквізитами'
+    ],
+    '6534': [
+        'Enrollment',
+        'Зарахування'
+    ],
+    '6538': [
+        'Transfer crediting',
+        'Зарахування переказу'
+    ],
+    '6539': [
+        'Transfer from my card',
+        'Зарахування зі своєї картки'
+    ],
+    '6540': [
+        'Transfer to my card',
+        'Переказ на свою картку'
+    ],
+    '6760': [
+        'Savings',
+        'Заощадження'
+    ],
+    '7299': [
+        'Services',
+        'Послуги'
+    ],
+    '8099': [
+        'Medical services',
+        'Медичні послуги'
+    ],
+    '8299': [
+        'Education',
+        'Освіта'
+    ],
+    '8398': [
+        'Foundations and organizations',
+        'Фонди та організації'
+    ],
+    '9999': [
+        'Other',
+        'Інше'
+    ]
+}
+
 def normalize_headers(df):
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
-    for name, mapping in COLUMN_MAPPING.items:
-        for i in name:
-            if i in df.columns:
-                df.rename(columns={i: mapping}, inplace=True)
+    for target_col, aliases in COLUMN_MAPPING.items():
+        
+        for alias in aliases:
+            if alias in df.columns:
+                df.rename(columns={alias: target_col}, inplace=True)
                 break
     return df
 
+NAME_TO_MCC = {
+    alias: code 
+    for code, aliases in CATEGORY_MAPPING.items() 
+    for alias in aliases
+}
+
+def map_category(df):
+    df['category'] = df['category'].replace(NAME_TO_MCC)
+    df['category'] = df['category'].str.split('.').str[0]
+
+current_dir = Path(__file__).parent 
+
+# 2. Build the path to the JSON file relative to tasks.py
+# This works regardless of where you run 'manage.py' from
+file_path = current_dir / 'static' / 'mcc-en-groups.json'
+
+with open(file_path, 'r', encoding='utf-8') as f:
+    mcc_data = json.load(f)
+MCC_GROUP_MAPPING = {
+    item['mcc']: item['group']['description'] 
+    for item in mcc_data
+}
+
+def normalize_category(df):
+    df['category'] = df['category'].astype(str).str.split('.').str[0]
+    df['category'] = df['category'].apply(lambda x: x.zfill(4) if x.isdigit() else x)
+    df['category'] = df['category'].map(MCC_GROUP_MAPPING).fillna('Other')
+
 def import_transaction_file(file_obj, user, balance):
+    is_privatbank = False
     if file_obj.name.endswith('.csv'): #assume monobank csv
         df = pd.read_csv(file_obj)
-    elif file_obj.name.endswith(('.xls')):
+    elif file_obj.name.endswith(('.xlsx')):
         # the first line is header info, so skip it
         df = pd.read_excel(file_obj, header=1)
+        is_privatbank = True
     else:
         raise ValueError("Unsupported file type")
     df = normalize_headers(df)
@@ -125,6 +265,8 @@ def import_transaction_file(file_obj, user, balance):
 
     df.dropna(subset=['date', 'amount'], inplace=True)
 
+    if is_privatbank: map_category(df)
+    normalize_category(df)
     transactions = []
     for _, row in df.iterrows():
         transactions.append(
@@ -143,8 +285,6 @@ def import_transaction_file(file_obj, user, balance):
     
     latest_balance = df.iloc[0]['balance']
     balance.amount = latest_balance
-
-    return {"status": "success", "count": len(transactions)}
+    balance.save()
     
-
-
+    return {"status": "success", "count": len(transactions)}
