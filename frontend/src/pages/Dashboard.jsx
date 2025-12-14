@@ -207,6 +207,8 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
             <table>
                 <thead>
                     <tr>
+                        <th>Category</th>
+                        <th>Description</th>
                         <th>Amount</th>
                         <th>Date</th>
                         <th>Actions</th>
@@ -218,6 +220,8 @@ function TransactionList({ refreshTrigger, refreshFunction, currency, balanceId 
 
                         return (
                             <tr key={transaction.id}>
+                                <td>{transaction.category}</td>
+                                <td>{transaction.name}</td>
                                 <td>
                                     {isEditing ? (
                                         <>
