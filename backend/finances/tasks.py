@@ -31,7 +31,7 @@ def fetch_exchange_rates():
         try:
             Currency.objects.update_or_create(
                 num_code=code,
-                alpha_code=currency_object.alpha_3,
+                id=currency_object.alpha_3,
                 name=currency_object.name,
                 defaults={
                     "rate":rate["rateCross"],
