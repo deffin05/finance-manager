@@ -12,12 +12,11 @@ def test_transaction_increases_balance(api_client, user, balance):
     transaction_data = {
         'name': 'Salary',
         'category': 'Income',
-        'amount': 100.00,
-        'balance': balance.id, 
+        'amount': 100.00
     }
     
     api_client.force_authenticate(user=user)
-    response = api_client.post("/transactions/", transaction_data, format="json")
+    response = api_client.post(f"/balance/{balance.id}/transactions/", transaction_data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
     assert Transaction.objects.count() == 1
@@ -39,11 +38,10 @@ def test_transaction_decreases_balance(api_client, user, balance):
         'name': 'Groceries',
         'category': 'Food',
         'amount': -50.00,
-        'balance': balance.id,
     }
 
     api_client.force_authenticate(user=user)
-    response = api_client.post("/transactions/", transaction_data, format="json")
+    response = api_client.post(f"/balance/{balance.id}/transactions/", transaction_data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
     
@@ -69,11 +67,10 @@ def test_transaction_balance_independence(api_client, user, balance, eur_currenc
         'name': 'Souvenir',
         'category': 'Travel',
         'amount': -50.00,
-        'balance': eur_balance.id,
     }
 
     api_client.force_authenticate(user=user)
-    response = api_client.post("/transactions/", transaction_data, format="json")
+    response = api_client.post(f"/balance/{eur_balance.id}/transactions/", transaction_data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -100,11 +97,10 @@ def test_cannot_use_other_users_balance(api_client, user, currency):
         'name': 'Hack',
         'category': 'Theft',
         'amount': -100.00,
-        'balance': other_balance.id,
     }
 
     api_client.force_authenticate(user=user)
-    response = api_client.post("/transactions/", transaction_data, format="json")
+    response = api_client.post(f"/balance/{other_balance.id}/transactions/", transaction_data, format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "You do not own this balance" in str(response.data)
@@ -121,7 +117,7 @@ def test_transaction_list_scope(api_client, user, balance):
     Transaction.objects.create(user=other_user, balance=other_balance, amount=200.00, name="T2", category="C")
 
     api_client.force_authenticate(user=user)
-    response = api_client.get("/transactions/")
+    response = api_client.get(f"/balance/{balance.id}/transactions/")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data['count'] == 1
@@ -150,15 +146,14 @@ def test_user_cannot_create_transaction_spoofing_user(api_client, user, balance)
     victim = User.objects.create_user(username="victim", password="password")
     
     payload = {
-        "user": victim.id, 
-        "balance": balance.id,
+        "user": victim.id,
         "amount": "-100.00",
         "name": "Spoof",
         "category": "Test"
     }
 
     api_client.force_authenticate(user=user)
-    api_client.post("/transactions/", payload, format="json")
+    api_client.post(f"/balance/{balance.id}/transactions/", payload, format="json")
 
     assert Transaction.objects.filter(user=victim).count() == 0
     
@@ -191,7 +186,7 @@ def test_list_transactions_sorting(api_client, user, balance):
     Transaction.objects.create(user=user, balance=balance, amount=300.00, name="T3", category="C")
 
     api_client.force_authenticate(user=user)
-    response = api_client.get("/transactions/?sort_by=amount&order=asc")
+    response = api_client.get(f"/balance/{balance.id}/transactions/?sort_by=amount&order=asc")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data['count'] == 3
@@ -213,7 +208,7 @@ def test_list_transactions_pagination(api_client, user, balance):
     # Get page 2, size 5. Sorted by amount ASC implies:
     # Page 1: 0, 10, 20, 30, 40
     # Page 2: 50, 60, 70, 80, 90
-    response = api_client.get("/transactions/?page=2&page_size=5&order=asc&sort_by=amount")
+    response = api_client.get(f"/balance/{balance.id}/transactions/?page=2&page_size=5&order=asc&sort_by=amount")
 
     assert response.status_code == status.HTTP_200_OK
     assert len(response.data['results']) == 5
@@ -232,11 +227,10 @@ def test_create_transaction_changes_balance(api_client, user, balance):
         'name': 'Freelance Work',
         'category': 'Income',
         'amount': transaction_amount,
-        'balance': balance.id,
     }
 
     api_client.force_authenticate(user=user)
-    response = api_client.post("/transactions/", transaction_data, format="json")
+    response = api_client.post(f"/balance/{balance.id}/transactions/", transaction_data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
 

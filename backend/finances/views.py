@@ -1,3 +1,4 @@
+from django.http.response import Http404
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -21,7 +22,13 @@ class TransactionList(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        queryset = Transaction.objects.all().filter(user = self.request.user) # Filter transactions by the authenticated user
+        balance_id = self.kwargs["pk"]
+        balance = Balance.objects.get(pk=balance_id)
+
+        if not balance or not (balance.user == self.request.user):
+            raise Http404
+
+        queryset = Transaction.objects.all().filter(balance = balance)
 
         #sorting logic
 
@@ -40,10 +47,11 @@ class TransactionList(generics.ListCreateAPIView):
         return queryset 
 
     def perform_create(self, serializer): # Override to update balance on transaction creation
-        balance = serializer.validated_data.get('balance')
+        balance_id = self.kwargs["pk"]
+        balance = Balance.objects.get(pk=balance_id)
         if balance and balance.user != self.request.user:# Ensure the transaction is linked to the authenticated user
             raise ValidationError({"balance": "You do not own this balance."}) 
-        transaction = serializer.save(user=self.request.user) 
+        transaction = serializer.save(user=self.request.user, balance=balance)
         balance.amount += transaction.amount
         balance.save()
 
@@ -60,7 +68,7 @@ class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
         old_balance = old_transaction.balance
         transaction = serializer.save()
         
-        balance = serializer.validated_data.get('balance')
+        balance = transaction.balance
         
         old_balance.amount -= old_transaction.amount
         old_balance.save()
