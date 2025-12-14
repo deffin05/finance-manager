@@ -41,10 +41,46 @@ export default function Dashboard() {
         load()
     }, [refreshKey])
 
+    async function handleFileChange(event) {
+        event.preventDefault()
+        const formData = new FormData()
+        const file = event.target.files[0];
+
+        formData.append('file',file)
+
+        const response = await fetch(backendUrl + `import/?balance_id=${balanceId}`, {
+            method: "POST",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access'),
+            },
+            body: formData
+        })
+
+        if (response.ok) {
+            refreshData()
+        }
+    }
+
     return (
         <div>
             {isBalancesLoaded ?
                 <>
+                    <input
+                        type={"file"}
+                        id={"fileUpload"}
+                        onChange={handleFileChange}
+                        hidden
+                    />
+                    <label
+                        htmlFor={"fileUpload"}
+                        style={{
+                            backgroundColor:"#222",
+                            color:"#fff",
+                            padding:"8px",
+                            borderRadius:"4px",
+                            cursor:"pointer"
+                        }}
+                    >Upload payment statement</label>
                     <Balance
                         refreshTrigger={refreshKey}
                         balanceId={balanceId}
