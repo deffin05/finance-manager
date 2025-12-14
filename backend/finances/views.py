@@ -23,10 +23,12 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 250
 
+
 class TransactionList(generics.ListCreateAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
-    permission_classes = [IsAuthenticated] #Only allow authorized users so that we can gracefully return 403 if an anonymous user hits the endpoint
+    permission_classes = [
+        IsAuthenticated]  # Only allow authorized users so that we can gracefully return 403 if an anonymous user hits the endpoint
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
@@ -43,32 +45,33 @@ class TransactionList(generics.ListCreateAPIView):
         if not balance or not (balance.user == self.request.user):
             raise Http404
 
-        queryset = Transaction.objects.all().filter(balance = balance)
+        queryset = Transaction.objects.all().filter(balance=balance)
 
-        #sorting logic
+        # sorting logic
 
-        #TODO: sort by amount normalized currency values once we have that implemented
+        # TODO: sort by amount normalized currency values once we have that implemented
         sort_by = self.request.query_params.get('sort_by')
-        order = self.request.query_params.get('order') #'asc'/'desc'
+        order = self.request.query_params.get('order')  # 'asc'/'desc'
         allowed_sort_fields = ['date', 'amount']
         allowed_order_fields = ['asc', 'desc']
 
         if not sort_by or sort_by not in allowed_sort_fields: sort_by = 'date'
         if not order or order not in allowed_order_fields: order = 'desc'
 
-        if order == 'desc': sort_by = '-'+sort_by
+        if order == 'desc': sort_by = '-' + sort_by
 
         queryset = queryset.order_by(sort_by)
         return queryset
 
-    def perform_create(self, serializer): # Override to update balance on transaction creation
+    def perform_create(self, serializer):  # Override to update balance on transaction creation
         balance_id = self.kwargs["pk"]
         balance = Balance.objects.get(pk=balance_id)
-        if balance and balance.user != self.request.user:# Ensure the transaction is linked to the authenticated user
+        if balance and balance.user != self.request.user:  # Ensure the transaction is linked to the authenticated user
             raise ValidationError({"balance": "You do not own this balance."})
         transaction = serializer.save(user=self.request.user, balance=balance)
         balance.amount += transaction.amount
         balance.save()
+
 
 class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TransactionSerializer
@@ -106,18 +109,22 @@ class BalanceList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Balance.objects.filter(user=self.request.user)
-    def perform_create(self, serializer): #override to set user on balance creation
+
+    def perform_create(self, serializer):  # override to set user on balance creation
         if not serializer.validated_data.get('currency'):
             raise ValidationError({"currency": "Currency must be specified."})
         serializer.save(user=self.request.user)
+
 
 class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Balance.objects.all()
     permission_classes = [IsAuthenticated]
 
     serializer_class = BalanceSerializer
+
     def get_queryset(self):
         return Balance.objects.filter(user=self.request.user)
+
 
 class BalanceSumm(APIView):
     permission_classes = [IsAuthenticated]
@@ -127,7 +134,8 @@ class BalanceSumm(APIView):
         balances = Balance.objects.filter(user=user)
         total_amount = sum(balance.amount * balance.currency.rate for balance in balances)
         return Response({'total_amount_uah': total_amount})
-    
+
+
 class ProcessFileUpload(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -135,22 +143,23 @@ class ProcessFileUpload(APIView):
         serializer = FileUploadSerializer(data=request.data)
         if serializer.is_valid():
             file = serializer.validated_data['file']
-            #try:
+            # try:
             balance_id = request.query_params.get('balance_id')
             balance = Balance.objects.get(pk=balance_id)
             if not balance or not (balance.user == request.user):
                 raise Http404
             import_transaction_file(file, request.user, balance)
             return Response({'status': 'file processed successfully'})
-            #except Exception as e:
+            # except Exception as e:
             #    return Response({'error': str(e)}, status=400)
         return Response(serializer.errors, status=400)
-    
+
+
 class RefreshExchangeRates(APIView):
 
     def post(self, request):
         from finances.tasks import fetch_exchange_rates
         from finances.tasks import fetch_crypto_rates
-        #fetch_exchange_rates()
+        # fetch_exchange_rates()
         fetch_crypto_rates()
         return Response({'status': 'exchange rates refreshed successfully'})
