@@ -14,7 +14,7 @@ def fetch_exchange_rates():
     currency_object = pycountry.currencies.get(numeric="980")
     Currency.objects.update_or_create(
         num_code=currency_object.numeric,
-        alpha_code=currency_object.alpha_3,
+        id=currency_object.alpha_3,
         name=currency_object.name,
         rate=1,
     )
