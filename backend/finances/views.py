@@ -1,8 +1,11 @@
 from django.http.response import Http404
 from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from finances.serializers import TransactionSerializer, BalanceSerializer
 from finances.models import Transaction, Balance
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
@@ -98,3 +101,12 @@ class BalanceDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BalanceSerializer
     def get_queryset(self):
         return Balance.objects.filter(user=self.request.user)
+
+class BalanceSumm(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        user = request.user
+        balances = Balance.objects.filter(user=user)
+        total_amount = sum(balance.amount * balance.currency.rate for balance in balances)
+        return Response({'total_amount_uah': total_amount})

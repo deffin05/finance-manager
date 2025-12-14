@@ -1,6 +1,6 @@
 from django.urls import path
 
-from finances.views import TransactionList, TransactionDetail, BalanceDetail, BalanceList
+from finances.views import TransactionList, TransactionDetail, BalanceDetail, BalanceList, BalanceSumm
 
 urlpatterns = [
     path('transactions/<int:pk>/', TransactionDetail.as_view()),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('balance/<int:pk>/', BalanceDetail.as_view()),
 
     path('balance/<int:pk>/transactions/', TransactionList.as_view()),
+    path('balance/summ/', BalanceSumm.as_view()),
 ]
