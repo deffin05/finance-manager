@@ -409,8 +409,7 @@ function TransactionForm({refreshFunction, balanceId}) {
     async function handleSubmit(event) {
         event.preventDefault();
         const data = JSON.stringify({
-            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries()),
-            "category": "-"
+            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries())
         });
         const response = await fetch(backendUrl + `balance/${balanceId}/transactions/`,
             {
@@ -430,9 +429,37 @@ function TransactionForm({refreshFunction, balanceId}) {
     return (
         <>
             <form id='transactionForm' onSubmit={handleSubmit}>
-                <div>
-                    <label form='amount'>Amount</label>
-                    <input type='number' name='amount' step={0.01} required/>
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        gap:"8px"
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='category'>Category</label>
+                        <input type='text' name='category' required/>
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='name'>Description</label>
+                        <input type='text' name='name'/>
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='amount'>Amount</label>
+                        <input type='number' name='amount' step={0.01} required/>
+                    </div>
                 </div>
                 <input type='submit' value="Add transaction"/>
             </form>
