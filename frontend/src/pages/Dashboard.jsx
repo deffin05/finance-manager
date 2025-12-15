@@ -475,6 +475,43 @@ function DeleteButton({transaction, refreshFunction}) {
     )
 }
 
+function CurrencyDropdown({setCurrency}) {
+    const [currencies, setCurrencies] = useState([])
+    const [currencyName, setCurrencyName] = useState('')
+
+    useEffect(() => {
+        async function fetchCurrencies() {
+            const response = await fetch(backendUrl + 'currencies/')
+
+            const responseJson = await response.json()
+            setCurrencies(responseJson)
+        }
+
+        fetchCurrencies()
+    }, [])
+    return (
+        <>
+            <select
+                name="currency"
+                className={"modalInput"}
+                value={currencyName}
+                onChange={e => {
+                    setCurrencyName(e.target.value)
+                    setCurrency(e.target.options[e.target.selectedIndex].getAttribute('data-id'))
+                }}
+            >
+                {currencies.map(curr => {
+                    return (
+                        <>
+                            <option key={curr.id} data-id={curr.id}>{curr.alpha_code} | {curr.name}</option>
+                        </>
+                    )
+                })}
+            </select>
+        </>
+    )
+}
+
 function CreateBalanceModal({isOpen, onClose, onCreated}) {
     const [name, setName] = useState("");
     const [currency, setCurrency] = useState("USD");
@@ -539,16 +576,7 @@ function CreateBalanceModal({isOpen, onClose, onCreated}) {
                             form="currency">
                             Currency:
                         </label>
-                        <select
-                            name="currency"
-                            className={"modalInput"}
-                            value={currency}
-                            onChange={e => setCurrency(e.target.value)}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="UAH">UAH</option>
-                        </select>
+                        <CurrencyDropdown setCurrency={setCurrency}/>
                     </div>
 
                     <div>
@@ -708,15 +736,7 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
                         <label className={"modalLabel"}>
                             Currency:
                         </label>
-                        <select
-                            className={"modalInput"}
-                            value={currency}
-                            onChange={e => setCurrency(e.target.value)}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="UAH">UAH</option>
-                        </select>
+                        <CurrencyDropdown setCurrency={setCurrency}/>
                     </div>
 
                     <div>
