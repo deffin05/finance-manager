@@ -32,13 +32,6 @@ class TransactionList(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-
-        mono_user = MonobankUser.objects.filter(user=self.request.user).first()
-        if mono_user and mono_user.last_synced_at.timestamp() < timezone.now().timestamp() - 3600 * 6:
-            for balance in MonobankBalance.objects.filter(user=mono_user, watch=True):
-                fetch_monobank_report(mono_user.token, balance.monobank_id, int(mono_user.last_synced_at.timestamp()),
-                                      self.request.user, True)
-
         balance_id = self.kwargs["pk"]
         balance = Balance.objects.get(pk=balance_id)
 
@@ -108,6 +101,13 @@ class BalanceList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        mono_user = MonobankUser.objects.filter(user=self.request.user).first()
+        if mono_user and mono_user.last_synced_at.timestamp() < timezone.now().timestamp() - 3600 * 6:
+            for balance in MonobankBalance.objects.filter(user=mono_user, watch=True):
+                fetch_monobank_report(mono_user.token, balance.monobank_id, int(mono_user.last_synced_at.timestamp()),
+                                      self.request.user, True)
+            mono_user.save()
+
         return Balance.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):  # override to set user on balance creation
@@ -164,6 +164,7 @@ class RefreshExchangeRates(APIView):
         fetch_crypto_rates()
         return Response({'status': 'exchange rates refreshed successfully'})
 
+
 class CurrencyList(generics.ListAPIView):
     serializer_class = CurrencySerializer
     permission_classes = [AllowAny]
@@ -172,8 +173,8 @@ class CurrencyList(generics.ListAPIView):
         queryset = Currency.objects.all()
         search = self.request.query_params.get('search')
         if search is not None:
-            queryset = queryset.filter(alpha_code__icontains = search)
+            queryset = queryset.filter(alpha_code__icontains=search)
             if not queryset.exists() or queryset.count() == 0:
                 queryset = Currency.objects.all()
-                queryset = queryset.filter(name__icontains = search)
+                queryset = queryset.filter(name__icontains=search)
         return queryset
