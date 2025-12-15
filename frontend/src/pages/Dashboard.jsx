@@ -13,6 +13,19 @@ async function getBalances(setBalances, setBalanceId, setCurrency, loaded) {
             },
         });
         const balances = await response.json();
+        const net_worth = await fetch(backendUrl + 'balance/summ/', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('access'),
+            },
+        })
+
+        balances.unshift({
+            id: "",
+            amount: (await net_worth.json()).total_amount_uah,
+            currency: "UAH",
+            name: "Net worth",
+        })
         setBalances(balances);
         if (!loaded && balances.length > 0) {
             setBalanceId(balances[0].id)
@@ -93,50 +106,55 @@ export default function Dashboard() {
         <div>
             {isBalancesLoaded ?
                 <>
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between"
-                        }}
-                    >
-                        <input
-                            type={"file"}
-                            id={"fileUpload"}
-                            onChange={handleFileChange}
-                            hidden
-                        />
-                        <label
-                            htmlFor={"fileUpload"}
-                            style={{
-                                backgroundColor: "#222",
-                                color: "#fff",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                cursor: "pointer"
-                            }}
-                        >Upload payment statement</label>
+                    {balanceId === "" ?
+                        <>
+                        </> : <>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between"
+                                }}
+                            >
+                                <input
+                                    type={"file"}
+                                    id={"fileUpload"}
+                                    onChange={handleFileChange}
+                                    hidden
+                                />
+                                <label
+                                    htmlFor={"fileUpload"}
+                                    style={{
+                                        backgroundColor: "#222",
+                                        color: "#fff",
+                                        padding: "8px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer"
+                                    }}
+                                >Upload payment statement</label>
 
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "8px"
-                            }}>
-                            <button
-                                style={{
-                                    backgroundColor: "#00c"
-                                }}
-                                onClick={handleEditBalance}
-                            >Edit
-                            </button>
-                            <button
-                                style={{
-                                    backgroundColor: "#c00"
-                                }}
-                                onClick={handleDeleteBalance}
-                            >Delete
-                            </button>
-                        </div>
-                    </div>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: "8px"
+                                    }}>
+                                    <button
+                                        style={{
+                                            backgroundColor: "#00c"
+                                        }}
+                                        onClick={handleEditBalance}
+                                    >Edit
+                                    </button>
+                                    <button
+                                        style={{
+                                            backgroundColor: "#c00"
+                                        }}
+                                        onClick={handleDeleteBalance}
+                                    >Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    }
                     <Balance
                         refreshTrigger={refreshKey}
                         balanceId={balanceId}
@@ -146,13 +164,17 @@ export default function Dashboard() {
                         setCurrency={setCurrency}
                         balances={balances}
                     />
-                    <TransactionList
-                        refreshTrigger={refreshKey}
-                        refreshFunction={refreshData}
-                        balanceId={balanceId}
-                        currency={currency}
-                    />
-                    <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                    {balanceId === "" ? <>
+                    </> : <>
+                        <TransactionList
+                            refreshTrigger={refreshKey}
+                            refreshFunction={refreshData}
+                            balanceId={balanceId}
+                            currency={currency}
+                        />
+                        <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                    </>
+                    }
                     <EditBalanceModal
                         isOpen={isEditModalOpen}
                         onClose={() => setIsEditModalOpen(false)}
@@ -200,7 +222,7 @@ function Balance({refreshTrigger, balanceId, refreshFunction, setBalanceId, curr
             />
 
             <h2>
-                {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
+                {balanceId === "" ? "Total value: " : ""} {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
             </h2>
 
             <CreateBalanceModal
@@ -232,6 +254,13 @@ function TransactionList({refreshTrigger, refreshFunction, currency, balanceId})
 
     async function getTransactions(url, isLoadMore = false) {
         setIsLoading(true);
+
+        if (balanceId === "") {
+            setTransactions([])
+            setNextPageUrl(null)
+            setIsLoading(false)
+            return
+        }
         try {
             const transactionsResponse = await fetch(url, {
                 method: "GET",
@@ -438,7 +467,7 @@ function TransactionForm({refreshFunction, balanceId}) {
                     style={{
                         display: "flex",
                         flexDirection: "row",
-                        gap:"8px"
+                        gap: "8px"
                     }}
                 >
                     <div
@@ -558,7 +587,7 @@ function CreateBalanceModal({isOpen, onClose, onCreated}) {
             balanceName = `${currency} balance`
         }
         try {
-            const response = await fetch(backendUrl + 'balance/', { // Adjust URL if different
+            const response = await fetch(backendUrl + 'balance/', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -710,7 +739,6 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
     const [currency, setCurrency] = useState("USD");
     const [amount, setAmount] = useState(0);
 
-    // Pre-fill form when the modal opens or the selected balance changes
     useEffect(() => {
         if (isOpen && balanceToEdit) {
             setName(balanceToEdit.name);
