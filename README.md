@@ -49,3 +49,14 @@ python manage.py migrate
 ```bash
 python manage.py runserver
 ```
+
+### Install front end dependencies
+```bash
+cd frontend
+npm install
+```
+
+### Run front end
+```bash
+npx vite
+```
