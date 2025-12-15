@@ -1,6 +1,6 @@
 import pycountry
 import requests
-import os 
+import os
 import json
 import pandas as pd
 import dotenv
@@ -9,6 +9,7 @@ from pathlib import Path
 dotenv.load_dotenv()
 
 from finances.models import Currency, Transaction, Balance
+
 
 def fetch_exchange_rates():
     url = "https://api.monobank.ua/bank/currency"
@@ -39,11 +40,12 @@ def fetch_exchange_rates():
                 id=currency_object.alpha_3,
                 name=currency_object.name,
                 defaults={
-                    "rate":rate["rateCross"],
+                    "rate": rate["rateCross"],
                 }
             )
         except Exception as e:
             print(e)
+
 
 def fetch_crypto_rates():
     url = "https://api.coingecko.com/api/v3/coins/markets"
@@ -56,13 +58,14 @@ def fetch_crypto_rates():
     params = {
         "vs_currency": "uah",
         "order": "market_cap_desc",
-        "per_page": 250, #we get max 250 per page (and i dont care enough to implement pagination here yet, this would pollute our db with KirkCoins and such anyway)
+        "per_page": 250,
+        # we get max 250 per page (and i dont care enough to implement pagination here yet, this would pollute our db with KirkCoins and such anyway)
         "page": 1,
         "sparkline": "false",
-        "x_cg_demo_api_key": api_key #get your own API key from coingecko
+        "x_cg_demo_api_key": api_key  # get your own API key from coingecko
     }
 
-    #this actually fetches crypto to UAH rates directly, so no painful conversions needed
+    # this actually fetches crypto to UAH rates directly, so no painful conversions needed
     currency_object = pycountry.currencies.get(numeric="980")
     Currency.objects.update_or_create(
         num_code=currency_object.numeric,
@@ -85,7 +88,8 @@ def fetch_crypto_rates():
             rate=rate,
             id=id_val
         )
-    
+
+
 COLUMN_MAPPING = {
     'date': [
         'Date', 'date', 'date_and_time',
@@ -93,11 +97,11 @@ COLUMN_MAPPING = {
     ],
     'amount': [
         'card_currency_amount,_(uah)',
-        'Amount', 'amount', 'amount_in_card_currency', 
+        'Amount', 'amount', 'amount_in_card_currency',
         'Сума', 'сума', 'сума_в_валюті_картки', 'всього', 'сума_в_валюті_картки_(uah)'
     ],
     'description': [
-        'Description', 'description', 
+        'Description', 'description',
         'Опис', 'опис', 'призначення', 'деталі_операції', 'опис_операції'
     ],
     'category': [
@@ -213,27 +217,31 @@ CATEGORY_MAPPING = {
     ]
 }
 
+
 def normalize_headers(df):
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
     for target_col, aliases in COLUMN_MAPPING.items():
-        
+
         for alias in aliases:
             if alias in df.columns:
                 df.rename(columns={alias: target_col}, inplace=True)
                 break
     return df
 
+
 NAME_TO_MCC = {
-    alias: code 
-    for code, aliases in CATEGORY_MAPPING.items() 
+    alias: code
+    for code, aliases in CATEGORY_MAPPING.items()
     for alias in aliases
 }
+
 
 def map_category(df):
     df['category'] = df['category'].replace(NAME_TO_MCC)
     df['category'] = df['category'].str.split('.').str[0]
 
-current_dir = Path(__file__).parent 
+
+current_dir = Path(__file__).parent
 
 # 2. Build the path to the JSON file relative to tasks.py
 # This works regardless of where you run 'manage.py' from
@@ -242,18 +250,20 @@ file_path = current_dir / 'static' / 'mcc-en-groups.json'
 with open(file_path, 'r', encoding='utf-8') as f:
     mcc_data = json.load(f)
 MCC_GROUP_MAPPING = {
-    item['mcc']: item['group']['description'] 
+    item['mcc']: item['group']['description']
     for item in mcc_data
 }
+
 
 def normalize_category(df):
     df['category'] = df['category'].astype(str).str.split('.').str[0]
     df['category'] = df['category'].apply(lambda x: x.zfill(4) if x.isdigit() else x)
     df['category'] = df['category'].map(MCC_GROUP_MAPPING).fillna('Other')
 
+
 def import_transaction_file(file_obj, user, balance):
     is_privatbank = False
-    if file_obj.name.endswith('.csv'): #assume monobank csv
+    if file_obj.name.endswith('.csv'):  # assume monobank csv
         df = pd.read_csv(file_obj)
     elif file_obj.name.endswith(('.xlsx')):
         # the first line is header info, so skip it
@@ -280,15 +290,15 @@ def import_transaction_file(file_obj, user, balance):
                 # Use .get() in case description/category weren't in the file
                 name=row.get('description', ''),
                 category=row.get('category', 'Uncategorized'),
-                user = user,
-                balance = balance
+                user=user,
+                balance=balance
             )
         )
-    
+
     Transaction.objects.bulk_create(transactions)
-    
+
     latest_balance = df.iloc[0]['balance']
     balance.amount = latest_balance
     balance.save()
-    
+
     return {"status": "success", "count": len(transactions)}
