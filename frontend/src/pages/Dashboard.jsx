@@ -408,8 +408,13 @@ function TransactionList({refreshTrigger, refreshFunction, currency, balanceId})
 function TransactionForm({refreshFunction, balanceId}) {
     async function handleSubmit(event) {
         event.preventDefault();
+        let form = Object.fromEntries(new FormData(document.forms['transactionForm']).entries());
+
+        if (form.category === "") {
+            form.category = "-"
+        }
         const data = JSON.stringify({
-            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries())
+            ...form
         });
         const response = await fetch(backendUrl + `balance/${balanceId}/transactions/`,
             {
@@ -442,7 +447,7 @@ function TransactionForm({refreshFunction, balanceId}) {
                             flexDirection: "column"
                         }}>
                         <label form='category'>Category</label>
-                        <input type='text' name='category' required/>
+                        <input type='text' name='category'/>
                     </div>
                     <div
                         style={{
