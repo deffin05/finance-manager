@@ -11,9 +11,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 
-import pandas as pd
-
-from finances.tasks import import_transaction_file
+from finances.tasks import import_transaction_file, fetch_exchange_rates, fetch_crypto_rates
 from monobank.models import MonobankUser, MonobankBalance
 from monobank.views import fetch_monobank_report
 
@@ -171,6 +169,18 @@ class CurrencyList(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Currency.objects.all()
+        update = False
+
+        try:
+            uah = queryset.get(alpha_code='UAH')
+            update = uah.updated.timestamp() < timezone.now().timestamp() - 3600
+        except Currency.DoesNotExist:
+            update = True
+
+        if update:
+            fetch_exchange_rates()
+            fetch_crypto_rates()
+
         search = self.request.query_params.get('search')
         if search is not None:
             queryset = queryset.filter(alpha_code__icontains=search)

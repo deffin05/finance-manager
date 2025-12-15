@@ -67,6 +67,7 @@ def fetch_crypto_rates():
 
     # this actually fetches crypto to UAH rates directly, so no painful conversions needed
     currency_object = pycountry.currencies.get(numeric="980")
+
     Currency.objects.update_or_create(
         num_code=currency_object.numeric,
         alpha_code=currency_object.alpha_3,
@@ -80,6 +81,13 @@ def fetch_crypto_rates():
         alpha_code = coin["symbol"].upper()
         name = coin["name"]
         rate = coin["current_price"]
+
+        try:
+            existing = Currency.objects.get(id=alpha_code)
+            if existing.name == name:
+                id_val = alpha_code
+        except Currency.DoesNotExist:
+            id_val = alpha_code
 
         Currency.objects.update_or_create(
             num_code=None,
