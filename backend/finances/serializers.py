@@ -30,4 +30,4 @@ class FileUploadSerializer(serializers.Serializer):
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
-        fields = ['alpha_code', 'name', 'rate']
+        fields = ['id', 'alpha_code', 'name', 'rate']

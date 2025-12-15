@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {backendUrl} from "../App";
 import {isLoggedIn} from "../utils";
 import {useEffect} from "react";
@@ -56,7 +56,15 @@ function Login() {
                 <label form='password'>Password</label>
                 <input type='password' name='password' required/>
 
-                <input type='submit'/>
+                <div
+                    style={{
+                        display:"flex",
+                        justifyContent:"space-between"
+                    }}
+                >
+                    <Link to={"/signup"}>Sign up</Link>
+                    <input type='submit'/>
+                </div>
             </form>
         </>
     )

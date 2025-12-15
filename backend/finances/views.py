@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.http.response import Http404
 from django.utils import timezone
 from rest_framework import generics
+from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -11,9 +14,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 
-import pandas as pd
-
-from finances.tasks import import_transaction_file
+from finances.tasks import import_transaction_file, fetch_exchange_rates, fetch_crypto_rates
 from monobank.models import MonobankUser, MonobankBalance
 from monobank.views import fetch_monobank_report
 
@@ -32,13 +33,6 @@ class TransactionList(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-
-        mono_user = MonobankUser.objects.filter(user=self.request.user).first()
-        if mono_user and mono_user.last_synced_at.timestamp() < timezone.now().timestamp() - 3600 * 6:
-            for balance in MonobankBalance.objects.filter(user=mono_user, watch=True):
-                fetch_monobank_report(mono_user.token, balance.monobank_id, int(mono_user.last_synced_at.timestamp()),
-                                      self.request.user, True)
-
         balance_id = self.kwargs["pk"]
         balance = Balance.objects.get(pk=balance_id)
 
@@ -108,6 +102,13 @@ class BalanceList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        mono_user = MonobankUser.objects.filter(user=self.request.user).first()
+        if mono_user and mono_user.last_synced_at.timestamp() < timezone.now().timestamp() - 3600 * 6:
+            for balance in MonobankBalance.objects.filter(user=mono_user, watch=True):
+                fetch_monobank_report(mono_user.token, balance.monobank_id, int(mono_user.last_synced_at.timestamp()),
+                                      self.request.user, True)
+            mono_user.save()
+
         return Balance.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):  # override to set user on balance creation
@@ -164,16 +165,43 @@ class RefreshExchangeRates(APIView):
         fetch_crypto_rates()
         return Response({'status': 'exchange rates refreshed successfully'})
 
+
 class CurrencyList(generics.ListAPIView):
     serializer_class = CurrencySerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
         queryset = Currency.objects.all()
+        update = False
+
+        try:
+            uah = queryset.get(alpha_code='UAH')
+            update = uah.updated.timestamp() < timezone.now().timestamp() - 3600
+        except Currency.DoesNotExist:
+            update = True
+
+        if update:
+            fetch_exchange_rates()
+            fetch_crypto_rates()
+
         search = self.request.query_params.get('search')
         if search is not None:
-            queryset = queryset.filter(alpha_code__icontains = search)
+            queryset = queryset.filter(alpha_code__icontains=search)
             if not queryset.exists() or queryset.count() == 0:
                 queryset = Currency.objects.all()
-                queryset = queryset.filter(name__icontains = search)
+                queryset = queryset.filter(name__icontains=search)
         return queryset
+
+
+@api_view(['GET'])
+def get_losses(request):
+    queryset = Transaction.objects.filter(user=request.user, date__gt=timezone.now() - timedelta(days=31), amount__lt=0)
+    total_losses = sum(transaction.amount * transaction.balance.currency.rate for transaction in queryset)
+    return Response({"losses": total_losses})
+
+
+@api_view(['GET'])
+def get_profits(request):
+    queryset = Transaction.objects.filter(user=request.user, date__gt=timezone.now() - timedelta(days=31), amount__gt=0)
+    total_profits = sum(transaction.amount * transaction.balance.currency.rate for transaction in queryset)
+    return Response({"profits": total_profits})

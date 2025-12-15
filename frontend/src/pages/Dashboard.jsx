@@ -13,6 +13,19 @@ async function getBalances(setBalances, setBalanceId, setCurrency, loaded) {
             },
         });
         const balances = await response.json();
+        const net_worth = await fetch(backendUrl + 'balance/summ/', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('access'),
+            },
+        })
+
+        balances.unshift({
+            id: "",
+            amount: (await net_worth.json()).total_amount_uah,
+            currency: "UAH",
+            name: "Net worth",
+        })
         setBalances(balances);
         if (!loaded && balances.length > 0) {
             setBalanceId(balances[0].id)
@@ -93,50 +106,55 @@ export default function Dashboard() {
         <div>
             {isBalancesLoaded ?
                 <>
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between"
-                        }}
-                    >
-                        <input
-                            type={"file"}
-                            id={"fileUpload"}
-                            onChange={handleFileChange}
-                            hidden
-                        />
-                        <label
-                            htmlFor={"fileUpload"}
-                            style={{
-                                backgroundColor: "#222",
-                                color: "#fff",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                cursor: "pointer"
-                            }}
-                        >Upload payment statement</label>
+                    {balanceId === "" ?
+                        <>
+                        </> : <>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between"
+                                }}
+                            >
+                                <input
+                                    type={"file"}
+                                    id={"fileUpload"}
+                                    onChange={handleFileChange}
+                                    hidden
+                                />
+                                <label
+                                    htmlFor={"fileUpload"}
+                                    style={{
+                                        backgroundColor: "#222",
+                                        color: "#fff",
+                                        padding: "8px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer"
+                                    }}
+                                >Upload payment statement</label>
 
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "8px"
-                            }}>
-                            <button
-                                style={{
-                                    backgroundColor: "#00c"
-                                }}
-                                onClick={handleEditBalance}
-                            >Edit
-                            </button>
-                            <button
-                                style={{
-                                    backgroundColor: "#c00"
-                                }}
-                                onClick={handleDeleteBalance}
-                            >Delete
-                            </button>
-                        </div>
-                    </div>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: "8px"
+                                    }}>
+                                    <button
+                                        style={{
+                                            backgroundColor: "#00c"
+                                        }}
+                                        onClick={handleEditBalance}
+                                    >Edit
+                                    </button>
+                                    <button
+                                        style={{
+                                            backgroundColor: "#c00"
+                                        }}
+                                        onClick={handleDeleteBalance}
+                                    >Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    }
                     <Balance
                         refreshTrigger={refreshKey}
                         balanceId={balanceId}
@@ -146,13 +164,17 @@ export default function Dashboard() {
                         setCurrency={setCurrency}
                         balances={balances}
                     />
-                    <TransactionList
-                        refreshTrigger={refreshKey}
-                        refreshFunction={refreshData}
-                        balanceId={balanceId}
-                        currency={currency}
-                    />
-                    <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                    {balanceId === "" ? <>
+                    </> : <>
+                        <TransactionList
+                            refreshTrigger={refreshKey}
+                            refreshFunction={refreshData}
+                            balanceId={balanceId}
+                            currency={currency}
+                        />
+                        <TransactionForm refreshFunction={refreshData} balanceId={balanceId}/>
+                    </>
+                    }
                     <EditBalanceModal
                         isOpen={isEditModalOpen}
                         onClose={() => setIsEditModalOpen(false)}
@@ -200,8 +222,14 @@ function Balance({refreshTrigger, balanceId, refreshFunction, setBalanceId, curr
             />
 
             <h2>
-                {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
+                {balanceId === "" ? "Total value: " : ""} {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
             </h2>
+
+            {balanceId === "" ? <>
+                <Stats/>
+            </> : <>
+            </>
+            }
 
             <CreateBalanceModal
                 isOpen={isModalOpen}
@@ -232,6 +260,13 @@ function TransactionList({refreshTrigger, refreshFunction, currency, balanceId})
 
     async function getTransactions(url, isLoadMore = false) {
         setIsLoading(true);
+
+        if (balanceId === "") {
+            setTransactions([])
+            setNextPageUrl(null)
+            setIsLoading(false)
+            return
+        }
         try {
             const transactionsResponse = await fetch(url, {
                 method: "GET",
@@ -408,9 +443,13 @@ function TransactionList({refreshTrigger, refreshFunction, currency, balanceId})
 function TransactionForm({refreshFunction, balanceId}) {
     async function handleSubmit(event) {
         event.preventDefault();
+        let form = Object.fromEntries(new FormData(document.forms['transactionForm']).entries());
+
+        if (form.category === "") {
+            form.category = "-"
+        }
         const data = JSON.stringify({
-            ...Object.fromEntries(new FormData(document.forms['transactionForm']).entries()),
-            "category": "-"
+            ...form
         });
         const response = await fetch(backendUrl + `balance/${balanceId}/transactions/`,
             {
@@ -430,9 +469,37 @@ function TransactionForm({refreshFunction, balanceId}) {
     return (
         <>
             <form id='transactionForm' onSubmit={handleSubmit}>
-                <div>
-                    <label form='amount'>Amount</label>
-                    <input type='number' name='amount' step={0.01} required/>
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        gap: "8px"
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='category'>Category</label>
+                        <input type='text' name='category'/>
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='name'>Description</label>
+                        <input type='text' name='name'/>
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column"
+                        }}>
+                        <label form='amount'>Amount</label>
+                        <input type='number' name='amount' step={0.01} required/>
+                    </div>
                 </div>
                 <input type='submit' value="Add transaction"/>
             </form>
@@ -475,6 +542,43 @@ function DeleteButton({transaction, refreshFunction}) {
     )
 }
 
+function CurrencyDropdown({setCurrency}) {
+    const [currencies, setCurrencies] = useState([])
+    const [currencyName, setCurrencyName] = useState('')
+
+    useEffect(() => {
+        async function fetchCurrencies() {
+            const response = await fetch(backendUrl + 'currencies/')
+
+            const responseJson = await response.json()
+            setCurrencies(responseJson)
+        }
+
+        fetchCurrencies()
+    }, [])
+    return (
+        <>
+            <select
+                name="currency"
+                className={"modalInput"}
+                value={currencyName}
+                onChange={e => {
+                    setCurrencyName(e.target.value)
+                    setCurrency(e.target.options[e.target.selectedIndex].getAttribute('data-id'))
+                }}
+            >
+                {currencies.map(curr => {
+                    return (
+                        <>
+                            <option key={curr.id} data-id={curr.id}>{curr.alpha_code} | {curr.name}</option>
+                        </>
+                    )
+                })}
+            </select>
+        </>
+    )
+}
+
 function CreateBalanceModal({isOpen, onClose, onCreated}) {
     const [name, setName] = useState("");
     const [currency, setCurrency] = useState("USD");
@@ -489,7 +593,7 @@ function CreateBalanceModal({isOpen, onClose, onCreated}) {
             balanceName = `${currency} balance`
         }
         try {
-            const response = await fetch(backendUrl + 'balance/', { // Adjust URL if different
+            const response = await fetch(backendUrl + 'balance/', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -539,16 +643,7 @@ function CreateBalanceModal({isOpen, onClose, onCreated}) {
                             form="currency">
                             Currency:
                         </label>
-                        <select
-                            name="currency"
-                            className={"modalInput"}
-                            value={currency}
-                            onChange={e => setCurrency(e.target.value)}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="UAH">UAH</option>
-                        </select>
+                        <CurrencyDropdown setCurrency={setCurrency}/>
                     </div>
 
                     <div>
@@ -650,7 +745,6 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
     const [currency, setCurrency] = useState("USD");
     const [amount, setAmount] = useState(0);
 
-    // Pre-fill form when the modal opens or the selected balance changes
     useEffect(() => {
         if (isOpen && balanceToEdit) {
             setName(balanceToEdit.name);
@@ -708,15 +802,7 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
                         <label className={"modalLabel"}>
                             Currency:
                         </label>
-                        <select
-                            className={"modalInput"}
-                            value={currency}
-                            onChange={e => setCurrency(e.target.value)}
-                        >
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="UAH">UAH</option>
-                        </select>
+                        <CurrencyDropdown setCurrency={setCurrency}/>
                     </div>
 
                     <div>
@@ -745,4 +831,44 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
             </div>
         </div>
     );
+}
+
+function Stats() {
+    const [expenses, setExpenses] = useState(0);
+    const [profits, setProfits] = useState(0);
+
+    useEffect(() => {
+        async function getExpenses() {
+            const response = await fetch(backendUrl + 'losses/',
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access')
+                    }
+                })
+            const responseJson = await response.json()
+
+            setExpenses(responseJson.losses)
+        }
+        async function getProfits() {
+            const response = await fetch(backendUrl + 'profits/',
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access')
+                    }
+                })
+            const responseJson = await response.json()
+
+            setProfits(responseJson.profits)
+
+        }
+        getExpenses()
+        getProfits()
+    }, [])
+
+    return(
+        <>
+            <p>Expenses in last month: {expenses}</p>
+            <p>Profits in last month: {profits}</p>
+        </>
+    )
 }

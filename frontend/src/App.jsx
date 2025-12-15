@@ -6,6 +6,7 @@ import {useEffect, useState} from 'react';
 import {isLoggedIn} from './utils.js';
 import Dashboard from './pages/Dashboard.jsx';
 import {Settings} from "./pages/Settings.jsx";
+import Signup from "./pages/Signup.jsx";
 
 export const backendUrl = 'http://localhost:8000/';
 
@@ -15,6 +16,7 @@ function App() {
 
     useEffect(() => {
         async function checkLogin() {
+            if (location.pathname === "/login" || location.pathname === "/signup") return;
             if (!(await isLoggedIn())) {
                 navigate("/login", {
                     replace: true
@@ -51,6 +53,7 @@ function App() {
                     <Route path='/' element={<Dashboard/>}/>
                     <Route path='/login' element={<Login/>}/>
                     <Route path='/settings' element={<Settings/>}/>
+                    <Route path='/signup' element={<Signup/>}/>
                 </Routes>
             </div>
         </>

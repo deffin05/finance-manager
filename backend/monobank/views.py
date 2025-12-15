@@ -1,3 +1,4 @@
+import decimal
 from datetime import datetime, timedelta
 from datetime import timezone as tz
 from django.utils import timezone
@@ -67,7 +68,7 @@ def fetch_monobank_report(token, balance_id, timestamp, user, adjust_balance=Fal
                 user=user
             )
             if adjust_balance:
-                balance.amount += report["amount"] / 100
+                balance.amount += decimal.Decimal(report["amount"] / 100)
                 balance.save()
 
 
