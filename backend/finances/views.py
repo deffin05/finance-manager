@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.http.response import Http404
 from django.utils import timezone
 from rest_framework import generics
+from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -188,3 +191,17 @@ class CurrencyList(generics.ListAPIView):
                 queryset = Currency.objects.all()
                 queryset = queryset.filter(name__icontains=search)
         return queryset
+
+
+@api_view(['GET'])
+def get_losses(request):
+    queryset = Transaction.objects.filter(user=request.user, date__gt=timezone.now() - timedelta(days=31), amount__lt=0)
+    total_losses = sum(transaction.amount * transaction.balance.currency.rate for transaction in queryset)
+    return Response({"losses": total_losses})
+
+
+@api_view(['GET'])
+def get_profits(request):
+    queryset = Transaction.objects.filter(user=request.user, date__gt=timezone.now() - timedelta(days=31), amount__gt=0)
+    total_profits = sum(transaction.amount * transaction.balance.currency.rate for transaction in queryset)
+    return Response({"profits": total_profits})

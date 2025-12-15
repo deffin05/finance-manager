@@ -225,6 +225,12 @@ function Balance({refreshTrigger, balanceId, refreshFunction, setBalanceId, curr
                 {balanceId === "" ? "Total value: " : ""} {new Intl.NumberFormat("en-US", {minimumFractionDigits: 2}).format(currentAmount)} {currency}
             </h2>
 
+            {balanceId === "" ? <>
+                <Stats/>
+            </> : <>
+            </>
+            }
+
             <CreateBalanceModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -825,4 +831,44 @@ function EditBalanceModal({isOpen, onClose, onUpdated, balanceToEdit}) {
             </div>
         </div>
     );
+}
+
+function Stats() {
+    const [expenses, setExpenses] = useState(0);
+    const [profits, setProfits] = useState(0);
+
+    useEffect(() => {
+        async function getExpenses() {
+            const response = await fetch(backendUrl + 'losses/',
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access')
+                    }
+                })
+            const responseJson = await response.json()
+
+            setExpenses(responseJson.losses)
+        }
+        async function getProfits() {
+            const response = await fetch(backendUrl + 'profits/',
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access')
+                    }
+                })
+            const responseJson = await response.json()
+
+            setProfits(responseJson.profits)
+
+        }
+        getExpenses()
+        getProfits()
+    }, [])
+
+    return(
+        <>
+            <p>Expenses in last month: {expenses}</p>
+            <p>Profits in last month: {profits}</p>
+        </>
+    )
 }
